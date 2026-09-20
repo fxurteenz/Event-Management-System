@@ -45,10 +45,24 @@ CREATE TABLE Activities (
     end_time DATETIME NOT NULL,
     activity_hours DECIMAL(5, 2) NOT NULL,
     qr_code_data VARCHAR(255) UNIQUE,
-    created_by INT NOT NULL, -- references Users
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES Activity_Categories(category_id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by) REFERENCES Users(user_id)
+    FOREIGN KEY (category_id) REFERENCES Activity_Categories(category_id) ON DELETE SET NULL
+);
+
+CREATE TABLE Activity_Target_Faculties (
+    activity_id INT NOT NULL,
+    faculty_id INT NOT NULL,
+    PRIMARY KEY (activity_id, faculty_id),
+    FOREIGN KEY (activity_id) REFERENCES Activities(activity_id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES Faculties(faculty_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Activity_Target_Majors (
+    activity_id INT NOT NULL,
+    major_id INT NOT NULL,
+    PRIMARY KEY (activity_id, major_id),
+    FOREIGN KEY (activity_id) REFERENCES Activities(activity_id) ON DELETE CASCADE,
+    FOREIGN KEY (major_id) REFERENCES Majors(major_id) ON DELETE CASCADE
 );
 
 CREATE TABLE Activity_Registrations (
