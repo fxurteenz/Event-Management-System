@@ -2,20 +2,20 @@ import db from '../../utils/db';
 
 export default defineEventHandler(async (event) => {
   try {
-    // Join Activities with Activity_Categories and Users to get useful data
     const query = `
       SELECT 
         a.activity_id, 
         a.title, 
+        a.description,
         a.start_time, 
         a.end_time, 
         a.activity_hours,
+        a.category_id,
         c.category_name,
-        u.username as creator_name
+        a.qr_code_data
       FROM Activities a
       LEFT JOIN Activity_Categories c ON a.category_id = c.category_id
-      LEFT JOIN Users u ON a.created_by = u.user_id
-      ORDER BY a.start_time DESC
+      ORDER BY a.start_time ASC
     `;
     const [rows]: any = await db.execute(query);
     
