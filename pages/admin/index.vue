@@ -3,6 +3,10 @@
     <div class="header">
       <h2>ผู้ดูแลระบบ (Admin Dashboard)</h2>
       <p>เลือกเมนูเพื่อจัดการข้อมูลพื้นฐานของระบบ</p>
+      <div class="header-links">
+        <NuxtLink to="/" class="nav-btn">🏠 กลับหน้าแรก (ปฏิทิน)</NuxtLink>
+        <NuxtLink to="/activities" class="nav-btn">📋 จัดการกิจกรรม</NuxtLink>
+      </div>
     </div>
 
     <div class="menu-grid">
@@ -49,6 +53,25 @@
 }
 .header p {
   color: #6b7280;
+  margin-bottom: 1rem;
+}
+.header-links {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+.nav-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+.nav-btn:hover {
+  background: #eff6ff;
 }
 .menu-grid {
   display: grid;

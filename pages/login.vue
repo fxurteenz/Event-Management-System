@@ -62,12 +62,20 @@ const handleLogin = async () => {
       }
     })
     
-    // สำเร็จ! ในของจริงควรเก็บ token ไว้ใน cookie หรือ localStorage
-    alert(`เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ${response.user.username} (Role: ${response.user.role})`)
-    
-    // เปลี่ยนหน้าไปตาม Role (ชั่วคราวให้ไปหน้า admin ก่อน)
-    // const router = useRouter()
-    // router.push('/admin')
+    // บันทึก session ใน cookie
+    const authUser = useCookie('auth_user')
+    authUser.value = response.user
+
+    const router = useRouter()
+    const role = (response.user.role || '').toLowerCase()
+
+    if (role === 'admin') {
+      router.push('/admin')
+    } else if (role === 'org_president') {
+      router.push('/activities')
+    } else {
+      router.push('/')
+    }
     
   } catch (err) {
     if (err.data && err.data.statusMessage) {
