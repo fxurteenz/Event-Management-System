@@ -22,9 +22,11 @@ CREATE TABLE Students (
     student_id VARCHAR(20) PRIMARY KEY, -- e.g. student ID number
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
+    faculty_id INT NULL,
     major_id INT NOT NULL,
     user_id INT NOT NULL,
     accumulated_hours DECIMAL(5, 2) DEFAULT 0.00,
+    FOREIGN KEY (faculty_id) REFERENCES Faculties(faculty_id) ON DELETE SET NULL,
     FOREIGN KEY (major_id) REFERENCES Majors(major_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
