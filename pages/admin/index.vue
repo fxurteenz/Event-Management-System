@@ -11,13 +11,8 @@
 
     <div class="menu-grid">
       <NuxtLink to="/admin/faculties" class="menu-card">
-        <h3>🏢 จัดการข้อมูลคณะ</h3>
-        <p>เพิ่ม แก้ไข ลบ ข้อมูลคณะ (Faculties)</p>
-      </NuxtLink>
-
-      <NuxtLink to="/admin/majors" class="menu-card">
-        <h3>📚 จัดการข้อมูลสาขาวิชา</h3>
-        <p>เพิ่ม แก้ไข ลบ ข้อมูลสาขาวิชา (Majors)</p>
+        <h3>🏢 จัดการข้อมูลคณะและสาขาวิชา</h3>
+        <p>เพิ่ม แก้ไข ลบ ข้อมูลคณะและสาขาวิชาในหน้าเดียว (Faculties & Majors)</p>
       </NuxtLink>
 
       <NuxtLink to="/admin/users" class="menu-card">
