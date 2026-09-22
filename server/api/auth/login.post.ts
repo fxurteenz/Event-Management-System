@@ -42,14 +42,35 @@ export default defineEventHandler(async (event) => {
             });
         }
 
-        // In a real app, you would sign a JWT here
-        // For this boilerplate, we'll return the user info
+        // ค้นหาข้อมูลนักศึกษาและสังกัดคณะ/สาขาที่ผูกกับ User นี้ (ถ้ามี)
+        let studentInfo: any = null;
+        const [studentRows]: any = await db.execute(
+          `SELECT s.student_id, s.first_name, s.last_name, s.faculty_id, s.major_id, f.faculty_name, m.major_name
+           FROM Students s
+           LEFT JOIN Faculties f ON s.faculty_id = f.faculty_id
+           LEFT JOIN Majors m ON s.major_id = m.major_id
+           WHERE s.user_id = ?`,
+          [user.user_id]
+        );
+        if (studentRows.length > 0) {
+          studentInfo = studentRows[0];
+        }
+
+        const facultyId = studentInfo?.faculty_id || user.faculty_id || null;
+
         return {
             message: "Login successful",
             user: {
                 id: user.user_id,
                 username: user.username,
                 role: user.role,
+                faculty_id: facultyId,
+                faculty_name: studentInfo?.faculty_name || null,
+                student_id: studentInfo?.student_id || null,
+                first_name: studentInfo?.first_name || null,
+                last_name: studentInfo?.last_name || null,
+                major_id: studentInfo?.major_id || null,
+                major_name: studentInfo?.major_name || null
             },
             token: "dummy-jwt-token-replace-me",
         };
