@@ -69,7 +69,7 @@ CREATE TABLE Activity_Registrations (
     registration_id INT AUTO_INCREMENT PRIMARY KEY,
     activity_id INT NOT NULL,
     student_id VARCHAR(20) NOT NULL,
-    status ENUM('registered', 'cancelled', 'confirmed') DEFAULT 'registered',
+    status ENUM('Registered', 'Confirmed', 'Cancelled') DEFAULT 'Registered',
     check_in_time DATETIME NULL,
     check_out_time DATETIME NULL,
     registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

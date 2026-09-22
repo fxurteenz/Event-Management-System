@@ -12,8 +12,8 @@
 
       <div class="nav-actions">
         <template v-if="currentUser">
-          <NuxtLink v-if="isOrgPresident" to="/activities" class="btn-nav btn-org">
-            📋 จัดการกิจกรรม (องค์การ)
+          <NuxtLink v-if="isOrgPresident || isClubPresident" to="/activities" class="btn-nav btn-org">
+            📋 จัดการกิจกรรม{{ isClubPresident ? ' (สโมสร)' : ' (องค์การ)' }}
           </NuxtLink>
           <NuxtLink v-if="isAdmin" to="/admin" class="btn-nav btn-admin">
             ⚙️ เมนูผู้ดูแลระบบ
@@ -144,7 +144,10 @@
             <div class="event-scope-box">
               <div class="scope-row">
                 <span class="label">👥 จำนวนรับ:</span>
-                <span class="val">{{ act.max_participants ? act.max_participants + ' คน' : 'ไม่จำกัดจำนวน' }}</span>
+                <span class="val">
+                  {{ act.registered_count || 0 }} / {{ act.max_participants ? act.max_participants + ' คน' : 'ไม่จำกัด' }}
+                </span>
+                <span v-if="isActivityFull(act)" class="tag-full">ที่นั่งเต็มแล้ว</span>
               </div>
               <div class="scope-row">
                 <span class="label">🎯 สิทธิ์เข้าร่วม:</span>
@@ -172,13 +175,60 @@
               >
                 เข้าสู่ระบบเพื่อลงทะเบียน
               </NuxtLink>
-              <button 
-                v-else-if="isStudent" 
-                class="btn-register"
-                @click="alert('ระบบลงทะเบียนกิจกรรมจะเปิดในเฟสถัดไปครับ')"
-              >
-                📝 ลงทะเบียนกิจกรรม
-              </button>
+
+              <!-- สำหรับนักศึกษา -->
+              <div v-else-if="isStudent" class="student-action-area">
+                <!-- กรณีลงทะเบียนแล้ว -->
+                <template v-if="isStudentRegistered(act.activity_id)">
+                  <span 
+                    class="reg-status-badge" 
+                    :class="'badge-' + getRegistrationStatus(act.activity_id)"
+                  >
+                    {{ getRegistrationStatusText(act.activity_id) }}
+                  </span>
+                  <button 
+                    class="btn-cancel-reg" 
+                    :disabled="actionLoading[act.activity_id]"
+                    @click="handleCancelRegistration(act)"
+                  >
+                    {{ actionLoading[act.activity_id] ? 'กำลังดำเนินการ...' : '❌ ยกเลิก' }}
+                  </button>
+                </template>
+
+                <!-- กรณียังไม่ได้ลงทะเบียน -->
+                <template v-else>
+                  <button 
+                    v-if="isActivityFull(act)" 
+                    class="btn-disabled" 
+                    disabled
+                  >
+                    ⛔ เต็มแล้ว
+                  </button>
+                  <button 
+                    v-else-if="!isEligible(act)" 
+                    class="btn-disabled" 
+                    disabled
+                    title="กิจกรรมนี้เฉพาะคณะหรือสาขาวิชาที่กำหนด"
+                  >
+                    🚫 สิทธิ์ไม่ตรงคณะ/สาขา
+                  </button>
+                  <button 
+                    v-else 
+                    class="btn-register"
+                    :disabled="actionLoading[act.activity_id]"
+                    @click="handleRegister(act)"
+                  >
+                    {{ actionLoading[act.activity_id] ? 'กำลังบันทึก...' : '📝 ลงทะเบียนเข้าร่วม' }}
+                  </button>
+                </template>
+              </div>
+
+              <!-- สำหรับ Org / Club / Admin -->
+              <div v-else class="admin-quick-action">
+                <NuxtLink to="/activities" class="btn-goto-activities">
+                  ดูผู้ลงทะเบียน &rarr;
+                </NuxtLink>
+              </div>
             </div>
           </div>
         </div>
@@ -195,7 +245,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const authCookie = useCookie('auth_user')
 const currentUser = computed(() => authCookie.value || null)
@@ -203,6 +253,7 @@ const userRole = computed(() => (currentUser.value?.role || '').toLowerCase())
 
 const isStudent = computed(() => userRole.value === 'student')
 const isOrgPresident = computed(() => userRole.value === 'org_president' || userRole.value === 'admin')
+const isClubPresident = computed(() => userRole.value === 'club_president')
 const isAdmin = computed(() => userRole.value === 'admin')
 
 const handleLogout = () => {
@@ -212,12 +263,145 @@ const handleLogout = () => {
 }
 
 // Fetch Activities
-const { data: activitiesRes } = await useFetch('/api/activities')
+const { data: activitiesRes, refresh: refreshActivities } = await useFetch('/api/activities')
 const allActivities = computed(() => activitiesRes.value?.data || [])
 
 // Fetch Categories
 const { data: catRes } = await useFetch('/api/categories')
 const categories = computed(() => catRes.value?.data || [])
+
+// Student Registrations State
+const myRegistrations = ref([])
+const actionLoading = ref({})
+
+const fetchMyRegistrations = async () => {
+  if (!isStudent.value || !currentUser.value?.student_id) {
+    myRegistrations.value = []
+    return
+  }
+  try {
+    const res = await $fetch(`/api/activities/my-registrations?student_id=${currentUser.value.student_id}`)
+    myRegistrations.value = res.data || []
+  } catch (err) {
+    console.error('Failed to fetch my registrations:', err)
+  }
+}
+
+onMounted(() => {
+  if (isStudent.value) {
+    fetchMyRegistrations()
+  }
+})
+
+watch(() => currentUser.value?.student_id, () => {
+  if (isStudent.value) {
+    fetchMyRegistrations()
+  }
+})
+
+const myRegistrationsMap = computed(() => {
+  const map = {}
+  for (const reg of myRegistrations.value) {
+    map[reg.activity_id] = reg
+  }
+  return map
+})
+
+const isStudentRegistered = (activityId) => {
+  return !!myRegistrationsMap.value[activityId]
+}
+
+const getRegistrationStatus = (activityId) => {
+  return (myRegistrationsMap.value[activityId]?.status || '').toLowerCase()
+}
+
+const getRegistrationStatusText = (activityId) => {
+  const status = getRegistrationStatus(activityId)
+  if (status === 'confirmed') return '✅ ยืนยันสิทธิ์แล้ว'
+  if (status === 'registered') return '⏳ รอการยืนยัน'
+  return 'ลงทะเบียนแล้ว'
+}
+
+const isActivityFull = (act) => {
+  if (!act.max_participants || act.max_participants <= 0) return false
+  return (act.registered_count || 0) >= act.max_participants
+}
+
+const isEligible = (act) => {
+  const hasFac = act.target_faculties && act.target_faculties.length > 0
+  const hasMaj = act.target_majors && act.target_majors.length > 0
+  if (!hasFac && !hasMaj) return true
+
+  const studentFacId = Number(currentUser.value?.faculty_id)
+  const studentMajId = Number(currentUser.value?.major_id)
+
+  if (hasMaj) {
+    return act.target_majors.some(m => Number(m.major_id) === studentMajId)
+  }
+  if (hasFac) {
+    return act.target_faculties.some(f => Number(f.faculty_id) === studentFacId)
+  }
+  return true
+}
+
+const handleRegister = async (act) => {
+  if (!currentUser.value?.student_id) {
+    alert('ไม่พบข้อมูลรหัสนักศึกษา กรุณาเข้าสู่ระบบใหม่')
+    return
+  }
+
+  if (!confirm(`ยืนยันการลงทะเบียนเข้าร่วมกิจกรรม "${act.title}" ใช่หรือไม่?`)) {
+    return
+  }
+
+  actionLoading.value[act.activity_id] = true
+  try {
+    await $fetch('/api/activities/register', {
+      method: 'POST',
+      body: {
+        activity_id: act.activity_id,
+        student_id: currentUser.value.student_id
+      }
+    })
+    alert(`🎉 ลงทะเบียนเข้าร่วมกิจกรรม "${act.title}" สำเร็จ!`)
+    await Promise.all([
+      fetchMyRegistrations(),
+      refreshActivities()
+    ])
+  } catch (err) {
+    alert('❌ ไม่สามารถลงทะเบียนได้: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    actionLoading.value[act.activity_id] = false
+  }
+}
+
+const handleCancelRegistration = async (act) => {
+  if (!currentUser.value?.student_id) return
+
+  if (!confirm(`คุณต้องการยกเลิกการลงทะเบียนกิจกรรม "${act.title}" ใช่หรือไม่?`)) {
+    return
+  }
+
+  actionLoading.value[act.activity_id] = true
+  try {
+    await $fetch('/api/activities/cancel', {
+      method: 'POST',
+      body: {
+        activity_id: act.activity_id,
+        student_id: currentUser.value.student_id
+      }
+    })
+    alert('ยกเลิกการลงทะเบียนเรียบร้อยแล้ว')
+    await Promise.all([
+      fetchMyRegistrations(),
+      refreshActivities()
+    ])
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการยกเลิก: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    actionLoading.value[act.activity_id] = false
+  }
+}
 
 const selectedCategory = ref('')
 const selectedDateStr = ref('')
@@ -817,9 +1001,89 @@ const formatDateTime = (dateStr) => {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
-.btn-register:hover {
+.btn-register:hover:not(:disabled) {
   background: #059669;
+}
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.student-action-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reg-status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.badge-confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+.badge-registered {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.btn-cancel-reg {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-cancel-reg:hover:not(:disabled) {
+  background: #fecaca;
+}
+.btn-cancel-reg:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: not-allowed;
+}
+
+.tag-full {
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.35rem;
+}
+
+.admin-quick-action {
+  display: flex;
+  align-items: center;
+}
+.btn-goto-activities {
+  color: #4f46e5;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.btn-goto-activities:hover {
+  text-decoration: underline;
 }
 
 .btn-login-to-reg {
