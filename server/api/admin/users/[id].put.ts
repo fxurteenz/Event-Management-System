@@ -9,16 +9,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing fields' });
   }
 
+  const facultyId = body.faculty_id ? Number(body.faculty_id) : null;
+
   try {
     if (body.password) {
       await db.execute(
-        'UPDATE Users SET username = ?, password_hash = ?, role = ? WHERE user_id = ?',
-        [body.username, body.password, body.role, id]
+        'UPDATE Users SET username = ?, password_hash = ?, role = ?, faculty_id = ? WHERE user_id = ?',
+        [body.username, body.password, body.role, facultyId, id]
       );
     } else {
       await db.execute(
-        'UPDATE Users SET username = ?, role = ? WHERE user_id = ?',
-        [body.username, body.role, id]
+        'UPDATE Users SET username = ?, role = ?, faculty_id = ? WHERE user_id = ?',
+        [body.username, body.role, facultyId, id]
       );
     }
     return { success: true, message: 'User updated' };
