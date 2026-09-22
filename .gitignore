@@ -1,1 +1,8 @@
 .agents
+.env
+.DS*
+.prettierrc
+.nuxt
+scratch
+node_modules
+tsconfig.json
