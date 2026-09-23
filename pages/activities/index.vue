@@ -34,8 +34,13 @@
       </div>
     </div>
 
-    <!-- แจ้งเตือนสิทธิ์การเข้าถึงสำหรับผู้ใช้ทั่วไป/นักศึกษา -->
-    <div v-if="!canCreateActivity" class="permission-notice">
+    <!-- แจ้งเตือนสิทธิ์สำหรับประธานสโมสรนักศึกษา -->
+    <div v-if="userRole === 'club_president'" class="permission-notice notice-club">
+      <p>🛡️ <strong>สิทธิ์ประธานสโมสรนักศึกษา:</strong> ท่านสามารถตรวจสอบและยืนยันรายชื่อนักศึกษาในสังกัด <strong>{{ currentUser.faculty_name ? (currentUser.faculty_name.startsWith('คณะ') ? currentUser.faculty_name : 'คณะ' + currentUser.faculty_name) : 'คณะที่ท่านดูแล' }}</strong> ได้ที่ปุ่ม <strong>"👥 ผู้ลงทะเบียน"</strong> ในแต่ละกิจกรรม</p>
+    </div>
+
+    <!-- แจ้งเตือนสิทธิ์การเข้าถึงสำหรับนักศึกษา/ผู้ใช้ทั่วไป -->
+    <div v-else-if="!canCreateActivity" class="permission-notice">
       <p>ℹ️ <strong>สิทธิ์การใช้งาน:</strong> เฉพาะ <strong>นายกองค์การนักศึกษา (Org President)</strong> เท่านั้นที่สามารถสร้างกิจกรรมใหม่ได้</p>
       <p>นักศึกษาสามารถดูตารางกิจกรรมในรูปแบบปฏิทินได้ที่ <NuxtLink to="/">หน้าแรกของเว็บไซต์</NuxtLink></p>
     </div>
@@ -260,9 +265,16 @@
 
           <div class="card-footer">
             <span class="qr-label">รหัส QR: <code>{{ act.qr_code_data }}</code></span>
-            <div v-if="canCreateActivity" class="card-actions">
-              <button class="btn-edit" @click="openEditModal(act)">แก้ไข</button>
-              <button class="btn-delete" @click="deleteActivity(act.activity_id)">ลบ</button>
+            <div class="card-actions">
+              <button 
+                v-if="canManageRegistrations" 
+                class="btn-registrations" 
+                @click="openRegistrationsModal(act)"
+              >
+                👥 ผู้ลงทะเบียน ({{ act.registered_count || 0 }})
+              </button>
+              <button v-if="canCreateActivity" class="btn-edit" @click="openEditModal(act)">แก้ไข</button>
+              <button v-if="canCreateActivity" class="btn-delete" @click="deleteActivity(act.activity_id)">ลบ</button>
             </div>
           </div>
         </div>
@@ -270,6 +282,123 @@
         <div v-if="activities.length === 0" class="empty-state">
           <h3>ยังไม่มีกิจกรรมในระบบ</h3>
           <p v-if="canCreateActivity">กดปุ่ม <strong>"+ สร้างกิจกรรมใหม่"</strong> ด้านบนเพื่อเพิ่มกิจกรรมแรก</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal จัดการรายชื่อผู้ลงทะเบียน (สำหรับ Org President & Club President) -->
+    <div v-if="showRegistrationsModal" class="modal-backdrop" @click.self="showRegistrationsModal = false">
+      <div class="modal-card modal-card-lg">
+        <div class="modal-header">
+          <div>
+            <h3>รายชื่อผู้ลงทะเบียน: {{ currentManagingActivity?.title }}</h3>
+            <p class="subtitle-small">
+              ชั่วโมงกิจกรรม: {{ currentManagingActivity?.activity_hours }} ชม. | 
+              จำนวนรับ: {{ currentManagingActivity?.max_participants ? currentManagingActivity?.max_participants + ' คน' : 'ไม่จำกัด' }} | 
+              ผู้เข้าร่วมปัจจุบัน: {{ activeRegistrationsCount }} คน
+            </p>
+          </div>
+          <button class="btn-close" @click="showRegistrationsModal = false">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Club President Scope Notice -->
+          <div v-if="userRole === 'club_president'" class="role-scope-alert">
+            🛡️ <strong>มุมมองประธานสโมสร:</strong> ระบบแสดงเฉพาะรายชื่อนักศึกษาในสังกัด <strong>{{ currentUser.faculty_name ? (currentUser.faculty_name.startsWith('คณะ') ? currentUser.faculty_name : 'คณะ' + currentUser.faculty_name) : 'คณะของท่าน' }}</strong> ตามสิทธิ์การดูแล
+          </div>
+          <div v-else class="role-scope-alert alert-admin">
+            🌐 <strong>มุมมององค์การนักศึกษา / ผู้ดูแลระบบ:</strong> แสดงรายชื่อผู้ลงทะเบียนทั้งหมดทุกคณะ
+          </div>
+
+          <!-- Filter Tabs -->
+          <div v-if="!loadingRegistrations && registrationsList.length > 0" class="reg-filter-tabs">
+            <button 
+              type="button" 
+              class="reg-tab-btn" 
+              :class="{ active: registrationStatusFilter === 'active' }"
+              @click="registrationStatusFilter = 'active'"
+            >
+              ✅ ผู้เข้าร่วมปัจจุบัน ({{ activeRegistrationsCount }})
+            </button>
+            <button 
+              type="button" 
+              class="reg-tab-btn" 
+              :class="{ active: registrationStatusFilter === 'all' }"
+              @click="registrationStatusFilter = 'all'"
+            >
+              📋 ทั้งหมด ({{ registrationsList.length }})
+            </button>
+            <button 
+              type="button" 
+              class="reg-tab-btn" 
+              :class="{ active: registrationStatusFilter === 'cancelled' }"
+              @click="registrationStatusFilter = 'cancelled'"
+            >
+              ❌ ยกเลิกแล้ว ({{ cancelledRegistrationsCount }})
+            </button>
+          </div>
+
+          <div v-if="loadingRegistrations" class="loading-box">กำลังโหลดรายชื่อผู้ลงทะเบียน...</div>
+
+          <div v-else-if="displayedRegistrations.length === 0" class="empty-registrations">
+            <p v-if="registrationsList.length === 0">ยังไม่มีรายชื่อนักศึกษาลงทะเบียนในส่วนนี้</p>
+            <p v-else>ไม่มีข้อมูลในตัวกรองที่เลือก</p>
+          </div>
+
+          <div v-else class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>รหัสนักศึกษา</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>คณะ</th>
+                  <th>สาขาวิชา</th>
+                  <th>วันที่ลงทะเบียน</th>
+                  <th>สถานะ</th>
+                  <th>การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="reg in displayedRegistrations" :key="reg.registration_id">
+                  <td><code>{{ reg.student_id }}</code></td>
+                  <td>{{ reg.first_name }} {{ reg.last_name }}</td>
+                  <td>{{ reg.faculty_name || '-' }}</td>
+                  <td>{{ reg.major_name || '-' }}</td>
+                  <td>{{ formatDateTime(reg.registered_at) }}</td>
+                  <td>
+                    <span class="status-pill" :class="'status-' + (reg.status || '').toLowerCase()">
+                      {{ (reg.status || '').toLowerCase() === 'confirmed' ? '✅ ยืนยันแล้ว' : ((reg.status || '').toLowerCase() === 'cancelled' ? '❌ ยกเลิก' : '⏳ รอการยืนยัน') }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      <button 
+                        v-if="(reg.status || '').toLowerCase() !== 'confirmed'"
+                        class="btn-act-confirm" 
+                        @click="updateRegistrationStatus(reg.registration_id, 'confirmed')"
+                      >
+                        ยืนยัน
+                      </button>
+                      <button 
+                        v-if="(reg.status || '').toLowerCase() === 'confirmed'"
+                        class="btn-act-revert" 
+                        @click="updateRegistrationStatus(reg.registration_id, 'registered')"
+                      >
+                        รอการยืนยัน
+                      </button>
+                      <button 
+                        v-if="(reg.status || '').toLowerCase() !== 'cancelled'"
+                        class="btn-act-cancel" 
+                        @click="updateRegistrationStatus(reg.registration_id, 'cancelled')"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -285,6 +414,74 @@ const currentUser = computed(() => authCookie.value || null)
 const userRole = computed(() => (currentUser.value?.role || '').toLowerCase())
 const canCreateActivity = computed(() => userRole.value === 'org_president' || userRole.value === 'admin')
 const isAdmin = computed(() => userRole.value === 'admin')
+const canManageRegistrations = computed(() => ['org_president', 'admin', 'club_president'].includes(userRole.value))
+
+// Registration management state
+const showRegistrationsModal = ref(false)
+const currentManagingActivity = ref(null)
+const registrationsList = ref([])
+const loadingRegistrations = ref(false)
+const registrationStatusFilter = ref('active')
+
+const activeRegistrationsCount = computed(() => {
+  return registrationsList.value.filter(r => (r.status || '').toLowerCase() !== 'cancelled').length
+})
+
+const cancelledRegistrationsCount = computed(() => {
+  return registrationsList.value.filter(r => (r.status || '').toLowerCase() === 'cancelled').length
+})
+
+const displayedRegistrations = computed(() => {
+  if (registrationStatusFilter.value === 'active') {
+    return registrationsList.value.filter(r => (r.status || '').toLowerCase() !== 'cancelled')
+  }
+  if (registrationStatusFilter.value === 'cancelled') {
+    return registrationsList.value.filter(r => (r.status || '').toLowerCase() === 'cancelled')
+  }
+  return registrationsList.value
+})
+
+const openRegistrationsModal = async (act) => {
+  currentManagingActivity.value = act
+  registrationStatusFilter.value = 'active'
+  showRegistrationsModal.value = true
+  await fetchRegistrations()
+}
+
+const fetchRegistrations = async () => {
+  if (!currentManagingActivity.value) return
+  loadingRegistrations.value = true
+  try {
+    const params = new URLSearchParams({
+      activity_id: currentManagingActivity.value.activity_id,
+      role: userRole.value,
+      faculty_id: currentUser.value?.faculty_id || ''
+    })
+    const res = await $fetch(`/api/activities/registrations?${params.toString()}`)
+    registrationsList.value = res.data || []
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการโหลดรายชื่อ: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    loadingRegistrations.value = false
+  }
+}
+
+const updateRegistrationStatus = async (regId, status) => {
+  try {
+    await $fetch(`/api/activities/registrations/${regId}`, {
+      method: 'PUT',
+      body: {
+        status,
+        role: userRole.value,
+        faculty_id: currentUser.value?.faculty_id || null
+      }
+    })
+    await fetchRegistrations()
+    refresh()
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + (err.data?.statusMessage || err.message))
+  }
+}
 
 const handleLogout = () => {
   authCookie.value = null
@@ -981,5 +1178,191 @@ input:focus, select:focus, textarea:focus {
 }
 .btn-submit:disabled {
   background: #9ca3af;
+}
+
+/* Registration Modal & Table Styles */
+.btn-registrations {
+  background-color: #0284c7;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-registrations:hover {
+  background-color: #0369a1;
+}
+
+.modal-card-lg {
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.subtitle-small {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+}
+
+.modal-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+}
+
+.role-scope-alert {
+  background-color: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  color: #1e40af;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+}
+.alert-admin {
+  background-color: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #166534;
+}
+
+.loading-box, .empty-registrations {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.data-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.data-table code {
+  background-color: #f1f5f9;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.status-confirmed {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+.status-registered {
+  background-color: #fef9c3;
+  color: #a16207;
+}
+.status-cancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.action-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-act-confirm {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-act-confirm:hover {
+  background-color: #059669;
+}
+
+.btn-act-revert {
+  background-color: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-act-revert:hover {
+  background-color: #d97706;
+}
+
+.btn-act-cancel {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-act-cancel:hover {
+  background-color: #dc2626;
+}
+
+/* Modal Filter Tabs */
+.reg-filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reg-tab-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reg-tab-btn:hover {
+  background: #e2e8f0;
+}
+
+.reg-tab-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #1d4ed8;
 }
 </style>
