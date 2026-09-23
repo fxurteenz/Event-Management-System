@@ -220,208 +220,197 @@
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- Candidate Student Selector Sub-Modal -->
-                <Transition name="modal">
-                    <div v-if="showCandidateModal" class="candidate-modal-backdrop" @click.self="closeCandidateModal">
-                        <div class="modal-card modal-card-lg candidate-modal-card">
-                            <!-- Candidate Modal Header -->
-                            <div class="modal-header candidate-header">
-                                <div>
-                                    <div class="modal-title-row">
-                                        <h3>👥 เลือกจากรายชื่อนักศึกษา: {{ activity?.title }}</h3>
-                                    </div>
-                                    <p class="subtitle-small">
-                                        เพิ่มรายชื่อนักศึกษาเข้าร่วมกิจกรรม (รายบุคคลหรือทั้งสาขา/คณะ)
-                                        <span v-if="userRole === 'club_president'" class="target-scope-tag">
-                                            🏛️ สังกัด: {{ userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
-                                        </span>
-                                        <span v-else-if="props.activity?.target_majors?.length"
-                                            class="target-scope-tag">
-                                            🎯 กำหนดเฉพาะ: {{props.activity.target_majors.map(m =>
-                                            m.major_name).join(', ') }}
-                                        </span>
-                                        <span v-else-if="props.activity?.target_faculties?.length"
-                                            class="target-scope-tag">
-                                            🎯 กำหนดเฉพาะ: {{props.activity.target_faculties.map(f =>
-                                            f.faculty_name).join(', ') }}
-                                        </span>
-                                        <span v-else class="target-scope-tag open-scope">
-                                            🌐 เปิดรับทุกคณะ / ทุกสาขาวิชา
-                                        </span>
-                                    </p>
+            <!-- Candidate Student Selector Sub-Modal -->
+            <Transition name="modal">
+                <div v-if="showCandidateModal" class="candidate-modal-backdrop" @click.self="closeCandidateModal">
+                    <div class="modal-card modal-card-lg candidate-modal-card">
+                        <!-- Candidate Modal Header -->
+                        <div class="modal-header candidate-header">
+                            <div>
+                                <div class="modal-title-row">
+                                    <h3>👥 เลือกจากรายชื่อนักศึกษา: {{ activity?.title }}</h3>
                                 </div>
-                                <button class="btn-close" @click="closeCandidateModal"
-                                    title="ปิดหน้าต่าง">&times;</button>
+                                <p class="subtitle-small">
+                                    เพิ่มรายชื่อนักศึกษาเข้าร่วมกิจกรรม (รายบุคคลหรือทั้งสาขา/คณะ)
+                                    <span v-if="userRole === 'club_president'" class="target-scope-tag">
+                                        🏛️ สังกัด: {{ userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
+                                    </span>
+                                    <span v-else class="target-scope-tag"
+                                        :class="{ 'open-scope': !activity?.target_majors?.length && !activity?.target_faculties?.length }">
+                                        {{ !activity?.target_majors?.length && !activity?.target_faculties?.length ?
+                                        '🌐' : '🎯 ' }}{{ activityTargetScopeText }}
+                                    </span>
+                                </p>
                             </div>
+                            <button class="btn-close" @click="closeCandidateModal" title="ปิดหน้าต่าง">&times;</button>
+                        </div>
 
-                            <!-- Candidate Modal Body -->
-                            <div class="modal-body candidate-body">
-                                <!-- Filter Controls (Search, Faculty, Major) -->
-                                <div class="filter-controls-card">
-                                    <div class="filter-grid">
-                                        <!-- Search -->
-                                        <div class="filter-field">
-                                            <label>🔍 ค้นหา:</label>
-                                            <input type="text" v-model="candidateSearchQuery"
-                                                placeholder="รหัสนักศึกษา หรือชื่อ-นามสกุล..." class="filter-input" />
+                        <!-- Candidate Modal Body -->
+                        <div class="modal-body candidate-body">
+                            <!-- Filter Controls (Search, Faculty, Major) -->
+                            <div class="filter-controls-card">
+                                <div class="filter-grid">
+                                    <!-- Search -->
+                                    <div class="filter-field">
+                                        <label>🔍 ค้นหา:</label>
+                                        <input type="text" v-model="candidateSearchQuery"
+                                            placeholder="รหัสนักศึกษา หรือชื่อ-นามสกุล..." class="filter-input" />
+                                    </div>
+
+                                    <!-- Faculty Filter -->
+                                    <div class="filter-field">
+                                        <label>🏢 คณะ:</label>
+                                        <div v-if="userRole === 'club_president'" class="locked-faculty-badge">
+                                            🔒 {{ userFacultyName }}
                                         </div>
+                                        <select v-else v-model="candidateFacultyId" class="filter-select"
+                                            @change="candidateMajorId = ''">
+                                            <option value="">-- ทุกคณะที่กิจกรรมกำหนด --</option>
+                                            <option v-for="fac in candidateAvailableFaculties" :key="fac.faculty_id"
+                                                :value="String(fac.faculty_id)">
+                                                {{ fac.faculty_name }}
+                                            </option>
+                                        </select>
+                                    </div>
 
-                                        <!-- Faculty Filter -->
-                                        <div class="filter-field">
-                                            <label>🏢 คณะ:</label>
-                                            <div v-if="userRole === 'club_president'" class="locked-faculty-badge">
-                                                🔒 {{ userFacultyName }}
-                                            </div>
-                                            <select v-else v-model="candidateFacultyId" class="filter-select"
-                                                @change="candidateMajorId = ''">
-                                                <option value="">-- ทุกคณะที่กิจกรรมกำหนด --</option>
-                                                <option v-for="fac in candidateAvailableFaculties" :key="fac.faculty_id"
-                                                    :value="String(fac.faculty_id)">
-                                                    {{ fac.faculty_name }}
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Major Filter -->
-                                        <div class="filter-field">
-                                            <label>🎓 สาขาวิชา:</label>
-                                            <select v-model="candidateMajorId" class="filter-select">
-                                                <option value="">-- ทุกสาขาวิชา --</option>
-                                                <option v-for="maj in candidateAvailableMajors" :key="maj.major_id"
-                                                    :value="String(maj.major_id)">
-                                                    {{ maj.major_name }} {{ !candidateFacultyId && maj.faculty_name ?
+                                    <!-- Major Filter -->
+                                    <div class="filter-field">
+                                        <label>🎓 สาขาวิชา:</label>
+                                        <select v-model="candidateMajorId" class="filter-select">
+                                            <option value="">-- ทุกสาขาวิชา --</option>
+                                            <option v-for="maj in candidateAvailableMajors" :key="maj.major_id"
+                                                :value="String(maj.major_id)">
+                                                {{ maj.major_name }} {{ !candidateFacultyId && maj.faculty_name ?
                                                     `(${maj.faculty_name})` : '' }}
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Clear Filters -->
-                                        <div v-if="candidateSearchQuery || (userRole !== 'club_president' && candidateFacultyId) || candidateMajorId"
-                                            class="filter-actions">
-                                            <button type="button" class="btn-clear-filters"
-                                                @click="resetCandidateFilters">
-                                                ✕ ล้างตัวกรอง
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Selection Summary & Capacity Bar -->
-                                <div class="candidate-summary-bar">
-                                    <div class="summary-left">
-                                        <label class="select-all-label">
-                                            <input type="checkbox" :checked="isAllCandidatesSelected"
-                                                :indeterminate.prop="isCandidateIndeterminate"
-                                                :disabled="availableCandidatesCount === 0"
-                                                @change="toggleSelectAllCandidates" />
-                                            <span>เลือกทั้งหมดที่แสดง ({{ availableCandidatesCount }} คน)</span>
-                                        </label>
-                                        <span class="selected-pill">
-                                            เลือกแล้ว <strong>{{ selectedCandidateIds.length }}</strong> คน
-                                        </span>
+                                            </option>
+                                        </select>
                                     </div>
 
-                                    <div class="summary-right">
-                                        <span v-if="candidateAvailableSeats !== null" class="seats-badge"
-                                            :class="{ 'seats-warning': selectedCandidateIds.length > candidateAvailableSeats }">
-                                            ที่นั่งคงเหลือ: <strong>{{ candidateAvailableSeats }}</strong> ที่นั่ง
-                                        </span>
-                                        <button v-if="selectedCandidateIds.length > 0" type="button"
-                                            class="btn-clear-selection" @click="selectedCandidateIds = []">
-                                            ล้างการเลือก
+                                    <!-- Clear Filters -->
+                                    <div v-if="candidateSearchQuery || (userRole !== 'club_president' && candidateFacultyId) || candidateMajorId"
+                                        class="filter-actions">
+                                        <button type="button" class="btn-clear-filters" @click="resetCandidateFilters">
+                                            ✕ ล้างตัวกรอง
                                         </button>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Capacity Warning Alert -->
-                                <div v-if="isCapacityExceeded" class="capacity-warning-alert">
-                                    ⚠️ จำนวนนักศึกษาที่เลือก ({{ selectedCandidateIds.length }} คน)
-                                    เกินกว่าที่นั่งคงเหลือ ({{ candidateAvailableSeats }} ที่นั่ง) กรุณาปรับลดจำนวน
+                            <!-- Selection Summary & Capacity Bar -->
+                            <div class="candidate-summary-bar">
+                                <div class="summary-left">
+                                    <label class="select-all-label">
+                                        <input type="checkbox" :checked="isAllCandidatesSelected"
+                                            :indeterminate.prop="isCandidateIndeterminate"
+                                            :disabled="availableCandidatesCount === 0"
+                                            @change="toggleSelectAllCandidates" />
+                                        <span>เลือกทั้งหมดที่แสดง ({{ availableCandidatesCount }} คน)</span>
+                                    </label>
+                                    <span class="selected-pill">
+                                        เลือกแล้ว <strong>{{ selectedCandidateIds.length }}</strong> คน
+                                    </span>
                                 </div>
 
-                                <!-- Loading State -->
-                                <div v-if="loadingCandidates" class="loading-box">
-                                    <div class="spinner"></div>
-                                    <span>กำลังโหลดข้อมูลนักศึกษา...</span>
-                                </div>
-
-                                <!-- Empty State -->
-                                <div v-else-if="displayedCandidates.length === 0" class="empty-registrations">
-                                    <p v-if="candidateStudents.length === 0">
-                                        ไม่พบรายชื่อนักศึกษาที่ตรงตามเงื่อนไขของกิจกรรมนี้</p>
-                                    <p v-else>ไม่พบรายชื่อนักศึกษาที่ตรงกับเงื่อนไขตัวกรอง</p>
-                                </div>
-
-                                <!-- Candidate Table -->
-                                <div v-else class="table-container candidate-table-wrapper">
-                                    <table class="reg-table candidate-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 44px; text-align: center;">
-                                                    <input type="checkbox" :checked="isAllCandidatesSelected"
-                                                        :indeterminate.prop="isCandidateIndeterminate"
-                                                        :disabled="availableCandidatesCount === 0"
-                                                        @change="toggleSelectAllCandidates" />
-                                                </th>
-                                                <th style="width: 140px;">รหัสนักศึกษา</th>
-                                                <th>ชื่อ - นามสกุล</th>
-                                                <th>คณะ</th>
-                                                <th>สาขาวิชา</th>
-                                                <th style="width: 110px; text-align: center;">ชม. สะสม</th>
-                                                <th style="width: 120px; text-align: center;">สถานะ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="cand in displayedCandidates" :key="cand.student_id" :class="{
-                                                'selected-row': selectedCandidateIds.includes(cand.student_id),
-                                                'disabled-row': cand.is_already_registered
-                                            }" @click="toggleCandidateRow(cand)">
-                                                <td style="text-align: center;" @click.stop>
-                                                    <input type="checkbox" :value="cand.student_id"
-                                                        v-model="selectedCandidateIds"
-                                                        :disabled="cand.is_already_registered" />
-                                                </td>
-                                                <td class="font-mono font-bold">{{ cand.student_id }}</td>
-                                                <td>{{ cand.first_name }} {{ cand.last_name }}</td>
-                                                <td><span class="faculty-badge">{{ cand.faculty_name || '-' }}</span>
-                                                </td>
-                                                <td>{{ cand.major_name || '-' }}</td>
-                                                <td style="text-align: center;">{{ cand.accumulated_hours || 0 }} ชม.
-                                                </td>
-                                                <td style="text-align: center;">
-                                                    <span v-if="cand.is_already_registered"
-                                                        class="status-badge-registered">
-                                                        ✓ ลงทะเบียนแล้ว
-                                                    </span>
-                                                    <span v-else class="status-badge-eligible">
-                                                        สามารถเลือกได้
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="summary-right">
+                                    <span v-if="candidateAvailableSeats !== null" class="seats-badge"
+                                        :class="{ 'seats-warning': selectedCandidateIds.length > candidateAvailableSeats }">
+                                        ที่นั่งคงเหลือ: <strong>{{ candidateAvailableSeats }}</strong> ที่นั่ง
+                                    </span>
+                                    <button v-if="selectedCandidateIds.length > 0" type="button"
+                                        class="btn-clear-selection" @click="selectedCandidateIds = []">
+                                        ล้างการเลือก
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Candidate Modal Footer -->
-                            <div class="modal-footer candidate-footer">
-                                <button type="button" class="btn-cancel" @click="closeCandidateModal"
-                                    :disabled="isSavingCandidates">
-                                    ยกเลิก
-                                </button>
-                                <button type="button" class="btn-submit-candidates"
-                                    :disabled="selectedCandidateIds.length === 0 || isSavingCandidates || isCapacityExceeded"
-                                    @click="saveCandidateRegistrations">
-                                    <span v-if="isSavingCandidates" class="mini-spinner"></span>
-                                    <span>{{ isSavingCandidates ? 'กำลังบันทึก...' : `ยืนยันการเพิ่มรายชื่อ
-                                        (${selectedCandidateIds.length} คน)` }}</span>
-                                </button>
+                            <!-- Capacity Warning Alert -->
+                            <div v-if="isCapacityExceeded" class="capacity-warning-alert">
+                                ⚠️ จำนวนนักศึกษาที่เลือก ({{ selectedCandidateIds.length }} คน)
+                                เกินกว่าที่นั่งคงเหลือ ({{ candidateAvailableSeats }} ที่นั่ง) กรุณาปรับลดจำนวน
+                            </div>
+
+                            <!-- Loading State -->
+                            <div v-if="loadingCandidates" class="loading-box">
+                                <div class="spinner"></div>
+                                <span>กำลังโหลดข้อมูลนักศึกษา...</span>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div v-else-if="displayedCandidates.length === 0" class="empty-registrations">
+                                <p v-if="candidateStudents.length === 0">
+                                    ไม่พบรายชื่อนักศึกษาที่ตรงตามเงื่อนไขของกิจกรรมนี้</p>
+                                <p v-else>ไม่พบรายชื่อนักศึกษาที่ตรงกับเงื่อนไขตัวกรอง</p>
+                            </div>
+
+                            <!-- Candidate Table -->
+                            <div v-else class="table-container candidate-table-wrapper">
+                                <table class="reg-table candidate-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 44px; text-align: center;">
+                                                <input type="checkbox" :checked="isAllCandidatesSelected"
+                                                    :indeterminate.prop="isCandidateIndeterminate"
+                                                    :disabled="availableCandidatesCount === 0"
+                                                    @change="toggleSelectAllCandidates" />
+                                            </th>
+                                            <th style="width: 140px;">รหัสนักศึกษา</th>
+                                            <th>ชื่อ - นามสกุล</th>
+                                            <th>คณะ</th>
+                                            <th>สาขาวิชา</th>
+                                            <th style="width: 110px; text-align: center;">ชม. สะสม</th>
+                                            <th style="width: 120px; text-align: center;">สถานะ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="cand in displayedCandidates" :key="cand.student_id" :class="{
+                                            'selected-row': selectedCandidateIds.includes(cand.student_id),
+                                            'disabled-row': cand.is_already_registered
+                                        }" @click="toggleCandidateRow(cand)">
+                                            <td style="text-align: center;" @click.stop>
+                                                <input type="checkbox" :value="cand.student_id"
+                                                    v-model="selectedCandidateIds"
+                                                    :disabled="cand.is_already_registered" />
+                                            </td>
+                                            <td class="font-mono font-bold">{{ cand.student_id }}</td>
+                                            <td>{{ cand.first_name }} {{ cand.last_name }}</td>
+                                            <td><span class="faculty-badge">{{ cand.faculty_name || '-' }}</span>
+                                            </td>
+                                            <td>{{ cand.major_name || '-' }}</td>
+                                            <td style="text-align: center;">{{ cand.accumulated_hours || 0 }} ชม.
+                                            </td>
+                                            <td style="text-align: center;">
+                                                <span v-if="cand.is_already_registered" class="status-badge-registered">
+                                                    ✓ ลงทะเบียนแล้ว
+                                                </span>
+                                                <span v-else class="status-badge-eligible">
+                                                    สามารถเลือกได้
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
+
+                        <!-- Candidate Modal Footer -->
+                        <div class="modal-footer candidate-footer">
+                            <button type="button" class="btn-cancel" @click="closeCandidateModal"
+                                :disabled="isSavingCandidates">
+                                ยกเลิก
+                            </button>
+                            <button type="button" class="btn-submit-candidates"
+                                :disabled="selectedCandidateIds.length === 0 || isSavingCandidates || isCapacityExceeded"
+                                @click="saveCandidateRegistrations">
+                                <span v-if="isSavingCandidates" class="mini-spinner"></span>
+                                <span>{{ isSavingCandidates ? 'กำลังบันทึก...' : `ยืนยันการเพิ่มรายชื่อ
+                                    (${selectedCandidateIds.length} คน)` }}</span>
+                            </button>
+                        </div>
                     </div>
-                </Transition>
-            </div>
+                </div>
+            </Transition>
         </div>
     </Transition>
 </template>
@@ -482,6 +471,17 @@ const userFacultyName = computed(() => {
     return props.currentUser.faculty_name.startsWith('คณะ')
         ? props.currentUser.faculty_name
         : 'คณะ' + props.currentUser.faculty_name
+})
+
+const activityTargetScopeText = computed(() => {
+    if (!props.activity) return ''
+    if (props.activity.target_majors?.length) {
+        return 'กำหนดเฉพาะ: ' + props.activity.target_majors.map(m => m.major_name).join(', ')
+    }
+    if (props.activity.target_faculties?.length) {
+        return 'กำหนดเฉพาะ: ' + props.activity.target_faculties.map(f => f.faculty_name).join(', ')
+    }
+    return 'เปิดรับทุกคณะ / ทุกสาขาวิชา'
 })
 
 // Counts
