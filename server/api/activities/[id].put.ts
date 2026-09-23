@@ -71,11 +71,66 @@ export default defineEventHandler(async (event) => {
       );
     }
 
+    // Check if the activity is a mandatory activity ("กิจกรรมบังคับ")
+    let isMandatory = false;
+    if (body.category_id) {
+      const [catRows]: any = await connection.execute(
+        'SELECT category_id, category_name FROM Activity_Categories WHERE category_id = ?',
+        [Number(body.category_id)]
+      );
+      if (catRows.length > 0) {
+        const catName = catRows[0].category_name || '';
+        if (Number(catRows[0].category_id) === 1 || catName.includes('บังคับ')) {
+          isMandatory = true;
+        }
+      }
+    }
+
+    // Auto-enroll and auto-confirm students if mandatory
+    let enrolledCount = 0;
+    if (isMandatory) {
+      if (targetMajorIds.length > 0) {
+        const [regResult]: any = await connection.query(
+          `INSERT INTO Activity_Registrations (activity_id, student_id, status, registered_at)
+           SELECT ?, student_id, 'Confirmed', CURRENT_TIMESTAMP
+           FROM Students
+           WHERE major_id IN (?)
+           ON DUPLICATE KEY UPDATE status = 'Confirmed'`,
+          [id, targetMajorIds]
+        );
+        enrolledCount = regResult.affectedRows || 0;
+      } else if (targetFacultyIds.length > 0) {
+        const [regResult]: any = await connection.query(
+          `INSERT INTO Activity_Registrations (activity_id, student_id, status, registered_at)
+           SELECT ?, student_id, 'Confirmed', CURRENT_TIMESTAMP
+           FROM Students
+           WHERE faculty_id IN (?)
+           ON DUPLICATE KEY UPDATE status = 'Confirmed'`,
+          [id, targetFacultyIds]
+        );
+        enrolledCount = regResult.affectedRows || 0;
+      } else {
+        const [regResult]: any = await connection.query(
+          `INSERT INTO Activity_Registrations (activity_id, student_id, status, registered_at)
+           SELECT ?, student_id, 'Confirmed', CURRENT_TIMESTAMP
+           FROM Students
+           ON DUPLICATE KEY UPDATE status = 'Confirmed'`,
+          [id]
+        );
+        enrolledCount = regResult.affectedRows || 0;
+      }
+    }
+
     await connection.commit();
 
     return {
       success: true,
-      message: 'อัปเดตข้อมูลกิจกรรมสำเร็จ'
+      message: isMandatory 
+        ? `อัปเดตกิจกรรมบังคับสำเร็จ และได้ลงทะเบียนพร้อมยืนยันสถานะให้นักศึกษาจำนวน ${enrolledCount} คนโดยอัตโนมัติแล้ว`
+        : 'อัปเดตข้อมูลกิจกรรมสำเร็จ',
+      id: id,
+      is_mandatory: isMandatory,
+      enrolled_count: enrolledCount
     };
   } catch (error: any) {
     await connection.rollback();

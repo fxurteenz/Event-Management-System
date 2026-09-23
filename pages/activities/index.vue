@@ -208,6 +208,11 @@
             ></textarea>
           </div>
 
+          <!-- แจ้งเตือนกรณีเลือกกิจกรรมบังคับ -->
+          <div v-if="isMandatorySelected" class="mandatory-notice-box">
+            ⚡ <strong>ระบบลงทะเบียนอัตโนมัติ (กิจกรรมบังคับ):</strong> เมื่อบันทึกกิจกรรม ระบบจะเพิ่มรายชื่อและ <strong>ยืนยันสถานะสิทธิ์ (Confirmed)</strong> ให้นักศึกษาในสังกัดคณะ/สาขาวิชาที่ระบุทันที และนักศึกษาจะไม่สามารถยกเลิกกิจกรรมนี้ได้
+          </div>
+
           <div class="modal-footer">
             <button type="button" class="btn-cancel" @click="closeModal">ยกเลิก</button>
             <button type="submit" class="btn-submit" :disabled="isSubmitting">
@@ -380,11 +385,12 @@
                         ยืนยัน
                       </button>
                       <button 
-                        v-if="(reg.status || '').toLowerCase() === 'confirmed'"
+                        v-if="(reg.status || '').toLowerCase() === 'confirmed' && !isCurrentManagingActivityMandatory"
                         class="btn-act-revert" 
                         @click="updateRegistrationStatus(reg.registration_id, 'registered')"
+                        title="ย้อนสถานะกลับเป็นรอการยืนยัน"
                       >
-                        รอการยืนยัน
+                        ยกเลิกการยืนยัน
                       </button>
                       <button 
                         v-if="(reg.status || '').toLowerCase() !== 'cancelled'"
@@ -439,6 +445,13 @@ const displayedRegistrations = computed(() => {
     return registrationsList.value.filter(r => (r.status || '').toLowerCase() === 'cancelled')
   }
   return registrationsList.value
+})
+
+const isCurrentManagingActivityMandatory = computed(() => {
+  if (!currentManagingActivity.value) return false
+  const catId = Number(currentManagingActivity.value.category_id)
+  const catName = currentManagingActivity.value.category_name || ''
+  return catId === 1 || catName.includes('บังคับ')
 })
 
 const openRegistrationsModal = async (act) => {
@@ -602,6 +615,12 @@ const closeModal = () => {
   editingActivityId.value = null
 }
 
+const isMandatorySelected = computed(() => {
+  if (!newActivity.value.category_id) return false
+  const cat = categories.value.find(c => Number(c.category_id) === Number(newActivity.value.category_id))
+  return cat ? (Number(cat.category_id) === 1 || (cat.category_name || '').includes('บังคับ')) : false
+})
+
 const saveActivity = async () => {
   if (!canCreateActivity.value) {
     alert('คุณไม่มีสิทธิ์ในการจัดการกิจกรรม')
@@ -617,17 +636,17 @@ const saveActivity = async () => {
     }
 
     if (editingActivityId.value) {
-      await $fetch(`/api/activities/${editingActivityId.value}`, {
+      const res = await $fetch(`/api/activities/${editingActivityId.value}`, {
         method: 'PUT',
         body: payload
       })
-      alert('อัปเดตข้อมูลกิจกรรมเรียบร้อยแล้ว!')
+      alert(res?.message || 'อัปเดตข้อมูลกิจกรรมเรียบร้อยแล้ว!')
     } else {
-      await $fetch('/api/activities', {
+      const res = await $fetch('/api/activities', {
         method: 'POST',
         body: payload
       })
-      alert('สร้างกิจกรรมเรียบร้อยแล้ว!')
+      alert(res?.message || 'สร้างกิจกรรมเรียบร้อยแล้ว!')
     }
     closeModal()
     refresh()
@@ -1364,5 +1383,17 @@ input:focus, select:focus, textarea:focus {
   background: #2563eb;
   color: white;
   border-color: #1d4ed8;
+}
+
+.mandatory-notice-box {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #92400e;
+  line-height: 1.45;
+  margin-bottom: 1.25rem;
 }
 </style>

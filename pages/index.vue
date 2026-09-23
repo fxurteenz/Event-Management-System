@@ -187,12 +187,20 @@
                     {{ getRegistrationStatusText(act.activity_id) }}
                   </span>
                   <button 
+                    v-if="!isMandatoryActivity(act)"
                     class="btn-cancel-reg" 
                     :disabled="actionLoading[act.activity_id]"
                     @click="handleCancelRegistration(act)"
                   >
                     {{ actionLoading[act.activity_id] ? 'กำลังดำเนินการ...' : '❌ ยกเลิก' }}
                   </button>
+                  <span 
+                    v-else 
+                    class="btn-mandatory-locked" 
+                    title="กิจกรรมบังคับไม่สามารถยกเลิกการลงทะเบียนได้"
+                  >
+                    🔒 กิจกรรมบังคับ
+                  </span>
                 </template>
 
                 <!-- กรณียังไม่ได้ลงทะเบียน -->
@@ -320,6 +328,12 @@ const getRegistrationStatusText = (activityId) => {
   if (status === 'confirmed') return '✅ ยืนยันสิทธิ์แล้ว'
   if (status === 'registered') return '⏳ รอการยืนยัน'
   return 'ลงทะเบียนแล้ว'
+}
+
+const isMandatoryActivity = (act) => {
+  if (!act) return false
+  const catName = act.category_name || ''
+  return Number(act.category_id) === 1 || catName.includes('บังคับ')
 }
 
 const isActivityFull = (act) => {
@@ -1049,6 +1063,21 @@ const formatDateTime = (dateStr) => {
 .btn-cancel-reg:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-mandatory-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: not-allowed;
+  user-select: none;
 }
 
 .btn-disabled {
