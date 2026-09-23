@@ -292,7 +292,7 @@
     </div>
 
     <!-- Modal จัดการรายชื่อผู้ลงทะเบียน (สำหรับ Org President & Club President) -->
-    <div v-if="showRegistrationsModal" class="modal-backdrop" @click.self="showRegistrationsModal = false">
+    <div v-if="showRegistrationsModal" class="modal-backdrop" @click.self="closeRegistrationsModal">
       <div class="modal-card modal-card-lg">
         <div class="modal-header">
           <div>
@@ -303,7 +303,7 @@
               ผู้เข้าร่วมปัจจุบัน: {{ activeRegistrationsCount }} คน
             </p>
           </div>
-          <button class="btn-close" @click="showRegistrationsModal = false">&times;</button>
+          <button class="btn-close" @click="closeRegistrationsModal">&times;</button>
         </div>
 
         <div class="modal-body">
@@ -321,7 +321,7 @@
               type="button" 
               class="reg-tab-btn" 
               :class="{ active: registrationStatusFilter === 'active' }"
-              @click="registrationStatusFilter = 'active'"
+              @click="changeFilterTab('active')"
             >
               ✅ ผู้เข้าร่วมปัจจุบัน ({{ activeRegistrationsCount }})
             </button>
@@ -329,7 +329,7 @@
               type="button" 
               class="reg-tab-btn" 
               :class="{ active: registrationStatusFilter === 'all' }"
-              @click="registrationStatusFilter = 'all'"
+              @click="changeFilterTab('all')"
             >
               📋 ทั้งหมด ({{ registrationsList.length }})
             </button>
@@ -337,10 +337,53 @@
               type="button" 
               class="reg-tab-btn" 
               :class="{ active: registrationStatusFilter === 'cancelled' }"
-              @click="registrationStatusFilter = 'cancelled'"
+              @click="changeFilterTab('cancelled')"
             >
               ❌ ยกเลิกแล้ว ({{ cancelledRegistrationsCount }})
             </button>
+          </div>
+
+          <!-- Bulk Action Bar -->
+          <div v-if="selectedRegistrationIds.length > 0" class="bulk-action-bar">
+            <div class="bulk-info">
+              <span class="bulk-count-badge">{{ selectedRegistrationIds.length }}</span>
+              <span>เลือก {{ selectedRegistrationIds.length }} รายการ</span>
+            </div>
+            <div class="bulk-btn-group">
+              <button 
+                type="button" 
+                class="btn-bulk-confirm"
+                :disabled="isBulkUpdating"
+                @click="bulkUpdateStatus('confirmed')"
+              >
+                ✅ ยืนยันที่เลือก
+              </button>
+              <button 
+                v-if="!isCurrentManagingActivityMandatory"
+                type="button" 
+                class="btn-bulk-revert"
+                :disabled="isBulkUpdating"
+                @click="bulkUpdateStatus('registered')"
+              >
+                ↩️ ยกเลิกการยืนยันที่เลือก
+              </button>
+              <button 
+                type="button" 
+                class="btn-bulk-cancel"
+                :disabled="isBulkUpdating"
+                @click="bulkUpdateStatus('cancelled')"
+              >
+                ❌ ยกเลิกที่เลือก
+              </button>
+              <button 
+                type="button" 
+                class="btn-bulk-clear"
+                :disabled="isBulkUpdating"
+                @click="selectedRegistrationIds = []"
+              >
+                ล้างการเลือก
+              </button>
+            </div>
           </div>
 
           <div v-if="loadingRegistrations" class="loading-box">กำลังโหลดรายชื่อผู้ลงทะเบียน...</div>
@@ -354,6 +397,15 @@
             <table class="data-table">
               <thead>
                 <tr>
+                  <th class="th-checkbox">
+                    <input 
+                      type="checkbox" 
+                      :checked="isAllSelected" 
+                      :indeterminate.prop="isIndeterminate"
+                      @change="toggleSelectAll"
+                      title="เลือกทั้งหมด"
+                    />
+                  </th>
                   <th>รหัสนักศึกษา</th>
                   <th>ชื่อ-นามสกุล</th>
                   <th>คณะ</th>
@@ -364,7 +416,18 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="reg in displayedRegistrations" :key="reg.registration_id">
+                <tr 
+                  v-for="reg in displayedRegistrations" 
+                  :key="reg.registration_id"
+                  :class="{ 'row-selected': selectedRegistrationIds.includes(reg.registration_id) }"
+                >
+                  <td class="td-checkbox">
+                    <input 
+                      type="checkbox" 
+                      :value="reg.registration_id" 
+                      v-model="selectedRegistrationIds"
+                    />
+                  </td>
                   <td><code>{{ reg.student_id }}</code></td>
                   <td>{{ reg.first_name }} {{ reg.last_name }}</td>
                   <td>{{ reg.faculty_name || '-' }}</td>
@@ -428,6 +491,8 @@ const currentManagingActivity = ref(null)
 const registrationsList = ref([])
 const loadingRegistrations = ref(false)
 const registrationStatusFilter = ref('active')
+const selectedRegistrationIds = ref([])
+const isBulkUpdating = ref(false)
 
 const activeRegistrationsCount = computed(() => {
   return registrationsList.value.filter(r => (r.status || '').toLowerCase() !== 'cancelled').length
@@ -454,11 +519,45 @@ const isCurrentManagingActivityMandatory = computed(() => {
   return catId === 1 || catName.includes('บังคับ')
 })
 
+const isAllSelected = computed(() => {
+  if (displayedRegistrations.value.length === 0) return false
+  return displayedRegistrations.value.every(r => selectedRegistrationIds.value.includes(r.registration_id))
+})
+
+const isIndeterminate = computed(() => {
+  if (displayedRegistrations.value.length === 0) return false
+  const selectedInCurrent = displayedRegistrations.value.filter(r => selectedRegistrationIds.value.includes(r.registration_id))
+  return selectedInCurrent.length > 0 && selectedInCurrent.length < displayedRegistrations.value.length
+})
+
+const toggleSelectAll = (e) => {
+  const currentIds = displayedRegistrations.value.map(r => r.registration_id)
+  if (e.target.checked) {
+    const set = new Set([...selectedRegistrationIds.value, ...currentIds])
+    selectedRegistrationIds.value = Array.from(set)
+  } else {
+    const currentIdSet = new Set(currentIds)
+    selectedRegistrationIds.value = selectedRegistrationIds.value.filter(id => !currentIdSet.has(id))
+  }
+}
+
+const changeFilterTab = (tab) => {
+  registrationStatusFilter.value = tab
+  selectedRegistrationIds.value = []
+}
+
 const openRegistrationsModal = async (act) => {
   currentManagingActivity.value = act
   registrationStatusFilter.value = 'active'
+  selectedRegistrationIds.value = []
   showRegistrationsModal.value = true
   await fetchRegistrations()
+}
+
+const closeRegistrationsModal = () => {
+  showRegistrationsModal.value = false
+  currentManagingActivity.value = null
+  selectedRegistrationIds.value = []
 }
 
 const fetchRegistrations = async () => {
@@ -489,10 +588,43 @@ const updateRegistrationStatus = async (regId, status) => {
         faculty_id: currentUser.value?.faculty_id || null
       }
     })
+    selectedRegistrationIds.value = selectedRegistrationIds.value.filter(id => id !== regId)
     await fetchRegistrations()
     refresh()
   } catch (err) {
     alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + (err.data?.statusMessage || err.message))
+  }
+}
+
+const bulkUpdateStatus = async (status) => {
+  if (selectedRegistrationIds.value.length === 0) return
+
+  const actionText = status === 'confirmed' ? 'ยืนยัน' : (status === 'cancelled' ? 'ยกเลิก' : 'ยกเลิกการยืนยัน')
+  const count = selectedRegistrationIds.value.length
+  if (!confirm(`คุณต้องการ ${actionText} การลงทะเบียนที่เลือกทั้งหมด ${count} รายการ ใช่หรือไม่?`)) {
+    return
+  }
+
+  isBulkUpdating.value = true
+  try {
+    const res = await $fetch('/api/activities/registrations/bulk', {
+      method: 'PUT',
+      body: {
+        registration_ids: selectedRegistrationIds.value,
+        status,
+        role: userRole.value,
+        faculty_id: currentUser.value?.faculty_id || null
+      }
+    })
+
+    alert(res.message || 'ดำเนินการเรียบร้อยแล้ว')
+    selectedRegistrationIds.value = []
+    await fetchRegistrations()
+    refresh()
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการดำเนินการแบบกลุ่ม: ' + (err.data?.statusMessage || err.message))
+  } finally {
+    isBulkUpdating.value = false
   }
 }
 
@@ -1395,5 +1527,127 @@ input:focus, select:focus, textarea:focus {
   color: #92400e;
   line-height: 1.45;
   margin-bottom: 1.25rem;
+}
+
+/* Bulk Action Bar & Checkboxes */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #16a34a;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.bulk-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #166534;
+  font-size: 0.88rem;
+}
+
+.bulk-count-badge {
+  background: #16a34a;
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.bulk-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-bulk-confirm {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-bulk-confirm:hover:not(:disabled) {
+  background: #059669;
+}
+
+.btn-bulk-revert {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-bulk-revert:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.btn-bulk-cancel {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-bulk-cancel:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-bulk-clear {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-bulk-clear:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.bulk-btn-group button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.th-checkbox, .td-checkbox {
+  width: 44px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.th-checkbox input, .td-checkbox input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #16a34a;
+}
+
+.row-selected {
+  background-color: #f0fdf4 !important;
 }
 </style>
