@@ -1,100 +1,97 @@
 <template>
     <div class="activities-container">
         <!-- Navbar / Header -->
-        <div class="top-nav">
-            <div class="nav-brand">
-                <h2>ระบบจัดการกิจกรรมนักศึกษา</h2>
-            </div>
-            <div class="nav-links">
-                <NuxtLink to="/" class="nav-link">📅 ปฏิทินกิจกรรม (หน้าแรก)</NuxtLink>
-                <NuxtLink v-if="isAdmin" to="/admin" class="nav-link">⚙️ ผู้ดูแลระบบ (Admin)</NuxtLink>
-                <span v-if="currentUser" class="user-badge">
-                    👤 {{ currentUser.username }} ({{ currentUser.role }})
-                </span>
-                <button v-if="currentUser" @click="handleLogout" class="btn-logout">ออกจากระบบ</button>
-                <NuxtLink v-else to="/login" class="btn-login-link">เข้าสู่ระบบ</NuxtLink>
-            </div>
-        </div>
-
-        <!-- Page Header & Action Controls -->
-        <div class="content-header">
-            <div>
-                <h1>รายการกิจกรรมทั้งหมด (Activities Management)</h1>
-                <p class="subtitle">จัดการกิจกรรมสำหรับองค์การนักศึกษาและสโมสรนักศึกษา</p>
-            </div>
-
-            <!-- ปุ่มสร้างกิจกรรม: แสดงเฉพาะองค์การนักศึกษา หรือ Admin -->
-            <div class="actions">
-                <button v-if="canCreateActivity" class="btn-create" @click="openCreateModal">
-                    ➕ สร้างกิจกรรมใหม่
-                </button>
-            </div>
-        </div>
-
-        <!-- แจ้งเตือนสิทธิ์สำหรับประธานสโมสรนักศึกษา -->
-        <div v-if="userRole === 'club_president'" class="permission-notice notice-club">
-            <p>🛡️ <strong>สิทธิ์ประธานสโมสรนักศึกษา:</strong> ท่านสามารถตรวจสอบและยืนยันรายชื่อนักศึกษาในสังกัด
-                <strong>{{ userFacultyName }}</strong> ได้ที่ปุ่ม <strong>"👥 ผู้ลงทะเบียน"</strong> ในแต่ละกิจกรรม
-            </p>
-        </div>
-
-        <!-- แจ้งเตือนสิทธิ์การเข้าถึงสำหรับนักศึกษา/ผู้ใช้ทั่วไป -->
-        <div v-else-if="!canCreateActivity" class="permission-notice">
-            <p>ℹ️ <strong>สิทธิ์การใช้งาน:</strong> เฉพาะ <strong>นายกองค์การนักศึกษา (Org President)</strong> หรือ
-                <strong>ผู้ดูแลระบบ</strong> เท่านั้นที่สามารถสร้างกิจกรรมใหม่ได้
-            </p>
-            <p>นักศึกษาสามารถดูตารางกิจกรรมในรูปแบบปฏิทินได้ที่ <NuxtLink to="/">หน้าแรกของเว็บไซต์</NuxtLink>
-            </p>
-        </div>
-
-        <!-- Component: Activity Form Modal (Create / Edit) -->
-        <ActivityFormModal :show="showCreateModal" :editing-activity-id="editingActivityId"
-            :initial-data="formInitialData" :categories="categories" :faculties="faculties" :majors="majors"
-            :is-submitting="isSubmitting" @close="closeModal" @save="saveActivity" />
-
-        <!-- Component: Activity Registrations Modal (Manage Students & Bulk Actions) -->
-        <ActivityRegistrationsModal :show="showRegistrationsModal" :activity="currentManagingActivity"
-            :user-role="userRole" :current-user="currentUser" :faculties="faculties" :majors="majors"
-            @close="closeRegistrationsModal" @updated="refresh" />
-
-        <!-- Component: Activity Check-In Scanner Modal -->
-        <ActivityCheckInModal :show="showCheckInModal" :activity="currentScanningActivity" :user-role="userRole"
-            :current-user="currentUser" @close="closeCheckInModal" @checked-in="onCheckedIn" />
-
-        <!-- รายการกิจกรรม (Activity Cards Grid) -->
-        <div class="card">
-            <!-- Loading State: แสดงเฉพาะเมื่อยังไม่มีข้อมูลและกำลังโหลดครั้งแรก -->
-            <div v-if="pending && activities.length === 0" class="loading-state">
-                <div class="spinner"></div>
-                <p>กำลังโหลดข้อมูลกิจกรรม...</p>
-            </div>
-
-            <!-- Empty State: แสดงเมื่อโหลดเสร็จแล้วและไม่มีกิจกรรม -->
-            <div v-else-if="!pending && activities.length === 0" class="empty-state">
-                <h3>ยังไม่มีกิจกรรมในระบบ</h3>
-                <p v-if="canCreateActivity">กดปุ่ม <strong>"+ สร้างกิจกรรมใหม่"</strong> ด้านบนเพื่อเพิ่มกิจกรรมแรก</p>
-            </div>
-
-            <!-- Activity Cards Grid: แสดงเมื่อมีข้อมูลกิจกรรมเสมอ (ไม่หายไปขณะรีเฟรชหรือ Hydrate) -->
-            <div v-else class="grid-wrapper">
-                <div v-if="pending" class="refreshing-indicator">
-                    <div class="refresh-spinner"></div>
-                    <span>กำลังอัปเดตข้อมูลกิจกรรม...</span>
+        <AppNavbar />
+        <main class="main-layout">
+            <!-- Page Header & Action Controls -->
+            <div class="content-header">
+                <div>
+                    <h1>รายการกิจกรรมทั้งหมด (Activities Management)</h1>
+                    <p class="subtitle">จัดการกิจกรรมสำหรับองค์การนักศึกษาและสโมสรนักศึกษา</p>
                 </div>
 
-                <div class="grid">
-                    <!-- Component: Activity Card -->
-                    <ActivityCard v-for="act in activities" :key="act.activity_id" :activity="act"
-                        :can-create-activity="canCreateActivity" :can-manage-registrations="canManageRegistrations"
-                        @manage-registrations="openRegistrationsModal" @scan-checkin="openCheckInModal"
-                        @edit="openEditModal" @delete="deleteActivity" />
+                <!-- ปุ่มสร้างกิจกรรม: แสดงเฉพาะองค์การนักศึกษา หรือ Admin -->
+                <div class="actions">
+                    <button v-if="canCreateActivity" class="btn-create" @click="openCreateModal">
+                        <AppIcon name="plus" :size="18" />
+                        <span>สร้างกิจกรรมใหม่</span>
+                    </button>
                 </div>
             </div>
-        </div>
+
+            <!-- แจ้งเตือนสิทธิ์สำหรับประธานสโมสรนักศึกษา -->
+            <div v-if="userRole === 'club_president'" class="permission-notice notice-club">
+                <p>
+                    <AppIcon name="shield-check" :size="16" class="inline-icon" />
+                    <strong>สิทธิ์ประธานสโมสรนักศึกษา:</strong> ท่านสามารถตรวจสอบและยืนยันรายชื่อนักศึกษาในสังกัด
+                    <strong>{{ userFacultyName }}</strong> ได้ที่ปุ่ม <strong>"
+                        <AppIcon name="users" :size="14" class="inline-icon" /> ผู้ลงทะเบียน"
+                    </strong> ในแต่ละกิจกรรม
+                </p>
+            </div>
+
+            <!-- แจ้งเตือนสิทธิ์การเข้าถึงสำหรับนักศึกษา/ผู้ใช้ทั่วไป -->
+            <div v-else-if="!canCreateActivity" class="permission-notice">
+                <p>
+                    <AppIcon name="information-circle" :size="16" class="inline-icon" />
+                    <strong>สิทธิ์การใช้งาน:</strong> เฉพาะ <strong>นายกองค์การนักศึกษา (Org President)</strong> หรือ
+                    <strong>ผู้ดูแลระบบ</strong> เท่านั้นที่สามารถสร้างกิจกรรมใหม่ได้
+                </p>
+                <p>นักศึกษาสามารถดูตารางกิจกรรมในรูปแบบปฏิทินได้ที่ <NuxtLink to="/">หน้าแรกของเว็บไซต์</NuxtLink>
+                </p>
+            </div>
+
+            <!-- Component: Activity Form Modal (Create / Edit) -->
+            <ActivityFormModal :show="showCreateModal" :editing-activity-id="editingActivityId"
+                :initial-data="formInitialData" :categories="categories" :faculties="faculties" :majors="majors"
+                :is-submitting="isSubmitting" @close="closeModal" @save="saveActivity" />
+
+            <!-- Component: Activity Registrations Modal (Manage Students & Bulk Actions) -->
+            <ActivityRegistrationsModal :show="showRegistrationsModal" :activity="currentManagingActivity"
+                :user-role="userRole" :current-user="currentUser" :faculties="faculties" :majors="majors"
+                @close="closeRegistrationsModal" @updated="refresh" />
+
+            <!-- Component: Activity Check-In Scanner Modal -->
+            <ActivityCheckInModal :show="showCheckInModal" :activity="currentScanningActivity" :user-role="userRole"
+                :current-user="currentUser" @close="closeCheckInModal" @checked-in="onCheckedIn" />
+
+            <!-- รายการกิจกรรม (Activity Cards Grid) -->
+            <div class="card">
+                <!-- Loading State: แสดงเฉพาะเมื่อยังไม่มีข้อมูลและกำลังโหลดครั้งแรก -->
+                <div v-if="pending && activities.length === 0" class="loading-state">
+                    <div class="spinner"></div>
+                    <p>กำลังโหลดข้อมูลกิจกรรม...</p>
+                </div>
+
+                <!-- Empty State: แสดงเมื่อโหลดเสร็จแล้วและไม่มีกิจกรรม -->
+                <div v-else-if="!pending && activities.length === 0" class="empty-state">
+                    <h3>ยังไม่มีกิจกรรมในระบบ</h3>
+                    <p v-if="canCreateActivity">กดปุ่ม <strong>"+ สร้างกิจกรรมใหม่"</strong> ด้านบนเพื่อเพิ่มกิจกรรมแรก
+                    </p>
+                </div>
+
+                <!-- Activity Cards Grid: แสดงเมื่อมีข้อมูลกิจกรรมเสมอ (ไม่หายไปขณะรีเฟรชหรือ Hydrate) -->
+                <div v-else class="grid-wrapper">
+                    <div v-if="pending" class="refreshing-indicator">
+                        <div class="refresh-spinner"></div>
+                        <span>กำลังอัปเดตข้อมูลกิจกรรม...</span>
+                    </div>
+
+                    <div class="grid">
+                        <!-- Component: Activity Card -->
+                        <ActivityCard v-for="act in activities" :key="act.activity_id" :activity="act"
+                            :can-create-activity="canCreateActivity" :can-manage-registrations="canManageRegistrations"
+                            @manage-registrations="openRegistrationsModal" @scan-checkin="openCheckInModal"
+                            @edit="openEditModal" @delete="deleteActivity" />
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 </template>
 
 <script setup>
+import AppNavbar from "~/components/AppNavbar.vue"
 import { ref, computed } from 'vue'
 import ActivityCard from '~/components/activities/ActivityCard.vue'
 import ActivityFormModal from '~/components/activities/ActivityFormModal.vue'
@@ -258,104 +255,27 @@ const deleteActivity = async (id) => {
     } catch (error) {
         alert('เกิดข้อผิดพลาดในการลบ: ' + (error.data?.statusMessage || error.message))
     }
-}
+};
 
-const handleLogout = () => {
-    authCookie.value = null
-    const router = useRouter()
-    router.push('/login')
-}
 </script>
 
 <style scoped>
 .activities-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    background-color: #f8fafc;
+    color: #1e293b;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    color: #1e293b;
 }
 
-/* Navbar */
-.top-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.nav-brand h2 {
-    margin: 0;
-    font-size: 1.35rem;
-    color: #0f172a;
-}
-
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.nav-link {
-    text-decoration: none;
-    color: #475569;
-    font-size: 0.92rem;
-    font-weight: 500;
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.nav-link:hover {
-    background-color: #f1f5f9;
-    color: #1e293b;
-}
-
-.user-badge {
-    background: #e2e8f0;
-    color: #334155;
-    padding: 0.35rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.82rem;
-    font-weight: 500;
-}
-
-.btn-logout {
-    background: #fee2e2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    padding: 0.4rem 0.85rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-logout:hover {
-    background: #fca5a5;
-}
-
-.btn-login-link {
-    background: #2563eb;
-    color: white;
-    text-decoration: none;
-    padding: 0.45rem 1rem;
-    border-radius: 6px;
-    font-size: 0.88rem;
-    font-weight: 500;
-    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-login-link:hover {
-    background: #1d4ed8;
+.main-layout {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 2rem;
 }
 
 /* Header */
@@ -391,6 +311,8 @@ const handleLogout = () => {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    gap: 0.5rem;
 }
 
 .btn-create:hover {
@@ -514,10 +436,15 @@ const handleLogout = () => {
     }
 }
 
+@media (max-width: 1024px) {
+    .main-layout {
+        padding: 1.25rem;
+    }
+}
+
 @media (max-width: 768px) {
-    .top-nav {
-        flex-direction: column;
-        align-items: flex-start;
+    .main-layout {
+        padding: 0.65rem;
     }
 
     .grid {

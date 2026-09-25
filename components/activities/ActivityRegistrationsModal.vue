@@ -7,7 +7,9 @@
                     <div>
                         <div class="modal-title-row">
                             <h3>รายชื่อผู้ลงทะเบียน: {{ activity?.title }}</h3>
-                            <span v-if="isActivityMandatory" class="mandatory-tag">🔒 กิจกรรมบังคับ</span>
+                            <span v-if="isActivityMandatory" class="mandatory-tag">
+                                <AppIcon name="lock-closed" :size="16" class="inline-icon" /> กิจกรรมบังคับ
+                            </span>
                         </div>
                         <p class="subtitle-small">
                             ชั่วโมงกิจกรรม: {{ activity?.activity_hours }} ชม. |
@@ -18,11 +20,11 @@
                     </div>
                     <div class="modal-header-actions">
                         <button type="button" class="btn-open-scanner" @click="openCheckInModal">
-                            📷 สแกน QR เช็คชื่อ
+                            <AppIcon name="qr-code" :size="16" class="inline-icon" /> สแกน QR เช็คชื่อ
                         </button>
                         <button v-if="canAddFromList" type="button" class="btn-select-from-list"
                             @click="openCandidateModal">
-                            👥 เลือกจากรายชื่อ
+                            <AppIcon name="users" :size="16" class="inline-icon" /> เลือกจากรายชื่อ
                         </button>
                         <button class="btn-close" @click="handleClose" title="ปิดหน้าต่าง">&times;</button>
                     </div>
@@ -31,11 +33,13 @@
                 <div class="modal-body">
                     <!-- Role Scope Notice -->
                     <div v-if="userRole === 'club_president'" class="role-scope-alert">
-                        🛡️ <strong>มุมมองประธานสโมสร:</strong> ระบบแสดงเฉพาะรายชื่อนักศึกษาในสังกัด <strong>{{
+                        <AppIcon name="shield-check" :size="16" class="inline-icon text-green-600" />
+                        <strong>มุมมองประธานสโมสร:</strong> ระบบแสดงเฉพาะรายชื่อนักศึกษาในสังกัด <strong>{{
                             userFacultyName }}</strong> ตามสิทธิ์การดูแล
                     </div>
                     <div v-else class="role-scope-alert alert-admin">
-                        🌐 <strong>มุมมององค์การนักศึกษา / ผู้ดูแลระบบ:</strong> แสดงรายชื่อผู้ลงทะเบียนทั้งหมดทุกคณะ
+                        <AppIcon name="globe-asia-australia" :size="16" class="inline-icon" />
+                        <strong>มุมมององค์การนักศึกษา / ผู้ดูแลระบบ:</strong> แสดงรายชื่อผู้ลงทะเบียนทั้งหมดทุกคณะ
                     </div>
 
                     <!-- Filter Tabs -->
@@ -53,16 +57,19 @@
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'checked_in' }"
                             @click="changeFilterTab('checked_in')">
-                            🎉 เช็คชื่อแล้ว ({{ checkedInRegistrationsCount }})
+                            <AppIcon name="check-circle" :size="24" class="inline-icon text-green-500" /> เช็คชื่อแล้ว
+                            ({{ checkedInRegistrationsCount }})
                         </button>
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'all' }" @click="changeFilterTab('all')">
-                            📋 ทั้งหมด ({{ registrationsList.length }})
+                            <AppIcon name="clipboard-document-list" :size="16" class="inline-icon" /> ทั้งหมด ({{
+                            registrationsList.length }})
                         </button>
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'cancelled' }"
                             @click="changeFilterTab('cancelled')">
-                            ❌ ยกเลิกแล้ว ({{ cancelledRegistrationsCount }})
+                            <AppIcon name="x-circle" :size="24" class="inline-icon text-red-500" /> ยกเลิกแล้ว ({{
+                            cancelledRegistrationsCount }})
                         </button>
                     </div>
 
@@ -71,16 +78,20 @@
                         <div class="filter-grid">
                             <!-- Search box -->
                             <div class="filter-field">
-                                <label>🔍 ค้นหา:</label>
+                                <label>
+                                    <AppIcon name="magnifying-glass" :size="16" class="inline-icon" /> ค้นหา:
+                                </label>
                                 <input type="text" v-model="searchQuery" placeholder="รหัสนักศึกษา หรือชื่อ-นามสกุล..."
                                     class="filter-input" @input="onFilterChange" />
                             </div>
 
                             <!-- Faculty dropdown -->
                             <div class="filter-field">
-                                <label>🏢 คณะ:</label>
+                                <label>
+                                    <AppIcon name="building-office-2" :size="16" class="inline-icon" /> คณะ:
+                                </label>
                                 <div v-if="userRole === 'club_president'" class="locked-faculty-badge">
-                                    🔒 {{ userFacultyName }}
+                                    <AppIcon name="lock-closed" :size="16" class="inline-icon" /> {{ userFacultyName }}
                                 </div>
                                 <select v-else v-model="selectedFacultyId" class="filter-select"
                                     @change="onFacultyFilterChange">
@@ -94,7 +105,9 @@
 
                             <!-- Major dropdown -->
                             <div class="filter-field">
-                                <label>🎓 สาขาวิชา:</label>
+                                <label>
+                                    <AppIcon name="academic-cap" :size="16" class="inline-icon" /> สาขาวิชา:
+                                </label>
                                 <select v-model="selectedMajorId" class="filter-select" @change="onFilterChange">
                                     <option value="">-- ทุกสาขาวิชา --</option>
                                     <option v-for="maj in availableMajors" :key="maj.major_id"
@@ -108,7 +121,7 @@
                             <!-- Clear Filters -->
                             <div v-if="isAnyFilterActive" class="filter-actions">
                                 <button type="button" class="btn-clear-filters" @click="resetFilters">
-                                    ✕ ล้างตัวกรอง
+                                    <AppIcon name="x-mark" :size="16" class="inline-icon" /> ล้างตัวกรอง
                                 </button>
                             </div>
                         </div>
@@ -121,7 +134,9 @@
                                 <span class="bulk-count-badge">{{ selectedRegistrationIds.length }}</span>
                                 <span>เลือก {{ selectedRegistrationIds.length }} คน</span>
                                 <span v-if="isActivityMandatory" class="bulk-mandatory-hint">
-                                    (🔒 กิจกรรมบังคับ: ยืนยันอัตโนมัติ)
+                                    (
+                                    <AppIcon name="lock-closed" :size="16" class="inline-icon" /> กิจกรรมบังคับ:
+                                    ยืนยันอัตโนมัติ)
                                 </span>
                             </div>
                             <div class="bulk-btn-group">
@@ -141,7 +156,8 @@
                                 <!-- ปุ่มยกเลิก: แสดงเมื่อมีรายการที่ยังไม่ถูกยกเลิก -->
                                 <button v-if="canBulkCancel" type="button" class="btn-bulk-cancel"
                                     :disabled="isBulkUpdating" @click="bulkUpdateStatus('cancelled')">
-                                    ❌ ยกเลิกที่เลือก
+                                    <AppIcon name="x-circle" :size="24" class="inline-icon text-red-500" />
+                                    ยกเลิกที่เลือก
                                 </button>
 
                                 <button type="button" class="btn-bulk-clear" :disabled="isBulkUpdating"
@@ -198,15 +214,23 @@
                                     <td>{{ formatDateTime(reg.registered_at) }}</td>
                                     <td>
                                         <span class="status-pill" :class="'status-' + (reg.status || '').toLowerCase()">
-                                            {{ (reg.status || '').toLowerCase() === 'confirmed' ? '✅ ยืนยันแล้ว' :
-                                                ((reg.status || '').toLowerCase() === 'cancelled' ? '❌ ยกเลิก' :
-                                                    '⏳รอการยืนยัน') }}
+                                            <template v-if="(reg.status || '').toLowerCase() === 'confirmed'">
+                                                <AppIcon name="check-circle" :size="16" class="inline-icon" />
+                                                ยืนยันแล้ว
+                                            </template>
+                                            <template v-else-if="(reg.status || '').toLowerCase() === 'cancelled'">
+                                                <AppIcon name="x-circle" :size="16" class="inline-icon" /> ยกเลิก
+                                            </template>
+                                            <template v-else>
+                                                <AppIcon name="clock" :size="16" class="inline-icon" /> รอการยืนยัน
+                                            </template>
                                         </span>
                                     </td>
                                     <td>
                                         <span v-if="reg.check_in_time" class="checkin-badge-yes"
                                             :title="formatDateTime(reg.check_in_time)">
-                                            🕒 {{ formatTimeOnly(reg.check_in_time) }}
+                                            <AppIcon name="clock" :size="16" class="inline-icon" /> {{
+                                            formatTimeOnly(reg.check_in_time) }}
                                         </span>
                                         <span v-else class="checkin-badge-no">
                                             ⏳ ยังไม่เช็คชื่อ
@@ -219,7 +243,7 @@
                                                 v-if="(reg.status || '').toLowerCase() === 'confirmed' && !reg.check_in_time"
                                                 class="btn-act-checkin" @click="manualCheckInStudent(reg)"
                                                 title="เช็คชื่อเข้าร่วมกิจกรรม">
-                                                📷 เช็คชื่อ
+                                                <AppIcon name="qr-code" :size="16" class="inline-icon" /> เช็คชื่อ
                                             </button>
                                             <button v-if="(reg.status || '').toLowerCase() !== 'confirmed'"
                                                 class="btn-act-confirm"
@@ -255,17 +279,28 @@
                         <div class="modal-header candidate-header">
                             <div>
                                 <div class="modal-title-row">
-                                    <h3>👥 เลือกจากรายชื่อนักศึกษา: {{ activity?.title }}</h3>
+                                    <h3>
+                                        <AppIcon name="users" :size="16" class="inline-icon" /> เลือกจากรายชื่อนักศึกษา:
+                                        {{
+                                        activity?.title }}
+                                    </h3>
                                 </div>
                                 <p class="subtitle-small">
                                     เพิ่มรายชื่อนักศึกษาเข้าร่วมกิจกรรม (รายบุคคลหรือทั้งสาขา/คณะ)
                                     <span v-if="userRole === 'club_president'" class="target-scope-tag">
-                                        🏛️ สังกัด: {{ userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
+                                        <AppIcon name="building-library" :size="16" class="inline-icon" /> สังกัด: {{
+                                        userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
                                     </span>
                                     <span v-else class="target-scope-tag"
                                         :class="{ 'open-scope': !activity?.target_majors?.length && !activity?.target_faculties?.length }">
-                                        {{ !activity?.target_majors?.length && !activity?.target_faculties?.length ?
-                                            '🌐' : '🎯 ' }}{{ activityTargetScopeText }}
+                                        <template
+                                            v-if="!activity?.target_majors?.length && !activity?.target_faculties?.length">
+                                            <AppIcon name="globe-asia-australia" :size="16" class="inline-icon" />
+                                        </template>
+                                        <template v-else>
+                                            <AppIcon name="target" :size="16" class="inline-icon" />
+                                        </template>
+                                        {{ activityTargetScopeText }}
                                     </span>
                                 </p>
                             </div>
@@ -279,16 +314,21 @@
                                 <div class="filter-grid">
                                     <!-- Search -->
                                     <div class="filter-field">
-                                        <label>🔍 ค้นหา:</label>
+                                        <label>
+                                            <AppIcon name="magnifying-glass" :size="16" class="inline-icon" /> ค้นหา:
+                                        </label>
                                         <input type="text" v-model="candidateSearchQuery"
                                             placeholder="รหัสนักศึกษา หรือชื่อ-นามสกุล..." class="filter-input" />
                                     </div>
 
                                     <!-- Faculty Filter -->
                                     <div class="filter-field">
-                                        <label>🏢 คณะ:</label>
+                                        <label>
+                                            <AppIcon name="building-office-2" :size="16" class="inline-icon" /> คณะ:
+                                        </label>
                                         <div v-if="userRole === 'club_president'" class="locked-faculty-badge">
-                                            🔒 {{ userFacultyName }}
+                                            <AppIcon name="lock-closed" :size="16" class="inline-icon" /> {{
+                                            userFacultyName }}
                                         </div>
                                         <select v-else v-model="candidateFacultyId" class="filter-select"
                                             @change="candidateMajorId = ''">
@@ -302,7 +342,9 @@
 
                                     <!-- Major Filter -->
                                     <div class="filter-field">
-                                        <label>🎓 สาขาวิชา:</label>
+                                        <label>
+                                            <AppIcon name="academic-cap" :size="16" class="inline-icon" /> สาขาวิชา:
+                                        </label>
                                         <select v-model="candidateMajorId" class="filter-select">
                                             <option value="">-- ทุกสาขาวิชา --</option>
                                             <option v-for="maj in candidateAvailableMajors" :key="maj.major_id"
@@ -317,7 +359,7 @@
                                     <div v-if="candidateSearchQuery || (userRole !== 'club_president' && candidateFacultyId) || candidateMajorId"
                                         class="filter-actions">
                                         <button type="button" class="btn-clear-filters" @click="resetCandidateFilters">
-                                            ✕ ล้างตัวกรอง
+                                            <AppIcon name="x-mark" :size="16" class="inline-icon" /> ล้างตัวกรอง
                                         </button>
                                     </div>
                                 </div>
@@ -352,7 +394,8 @@
 
                             <!-- Capacity Warning Alert -->
                             <div v-if="isCapacityExceeded" class="capacity-warning-alert">
-                                ⚠️ จำนวนนักศึกษาที่เลือก ({{ selectedCandidateIds.length }} คน)
+                                <AppIcon name="exclamation-triangle" :size="20" class="inline-icon text-yellow-500" />
+                                จำนวนนักศึกษาที่เลือก ({{ selectedCandidateIds.length }} คน)
                                 เกินกว่าที่นั่งคงเหลือ ({{ candidateAvailableSeats }} ที่นั่ง) กรุณาปรับลดจำนวน
                             </div>
 
@@ -407,7 +450,8 @@
                                             </td>
                                             <td style="text-align: center;">
                                                 <span v-if="cand.is_already_registered" class="status-badge-registered">
-                                                    ✓ ลงทะเบียนแล้ว
+                                                    <AppIcon name="check" :size="14" class="inline-icon" />
+                                                    ลงทะเบียนแล้ว
                                                 </span>
                                                 <span v-else class="status-badge-eligible">
                                                     สามารถเลือกได้
@@ -445,6 +489,7 @@
 </template>
 
 <script setup>
+import AppIcon from "~/components/AppIcon.vue"
 import { ref, computed, watch } from 'vue'
 import ActivityCheckInModal from '~/components/activities/ActivityCheckInModal.vue'
 

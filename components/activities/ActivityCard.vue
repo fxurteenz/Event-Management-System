@@ -2,43 +2,54 @@
     <div class="activity-card" :class="{ 'card-mandatory': isMandatory }">
         <div class="card-top">
             <span class="badge" :class="{ 'badge-mandatory': isMandatory }">
-                {{ isMandatory ? '🔒 ' : '' }}{{ activity.category_name || 'กิจกรรมทั่วไป' }}
+                <AppIcon v-if="isMandatory" name="star" :size="12" class="inline-icon" />{{ activity.category_name ||
+                'กิจกรรมทั่วไป' }}
             </span>
-            <span class="hours-badge">⭐ {{ activity.activity_hours }} ชั่วโมง</span>
+            <span class="hours-badge">
+                <AppIcon name="clock" :size="12" class="inline-icon" /> {{ activity.activity_hours }} ชั่วโมง
+            </span>
         </div>
 
         <h3 class="card-title">{{ activity.title }}</h3>
         <p v-if="activity.description" class="desc">{{ activity.description }}</p>
 
         <div class="datetime-info">
-            <p>🕒 <strong>เริ่ม:</strong> {{ formatDateTime(activity.start_time) }}</p>
-            <p>⏳ <strong>สิ้นสุด:</strong> {{ formatDateTime(activity.end_time) }}</p>
+            <p>
+                <AppIcon name="calendar" :size="14" class="inline-icon" /> <strong>เริ่ม:</strong>
+                <ClientOnly fallback="...">{{ formatDateTime(activity.start_time) }}</ClientOnly>
+            </p>
+            <p>
+                <AppIcon name="clock" :size="14" class="inline-icon" /> <strong>สิ้นสุด:</strong>
+                <ClientOnly fallback="...">{{ formatDateTime(activity.end_time) }}</ClientOnly>
+            </p>
         </div>
 
         <!-- ข้อมูลเงื่อนไขจำนวนและคณะ/สาขา -->
         <div class="scope-info">
             <p>
-                👥 <strong>จำนวนรับ:</strong>
+                <AppIcon name="users" :size="14" class="inline-icon" /> <strong>จำนวนรับ:</strong>
                 <span class="val-pill">
                     {{ activity.max_participants ? activity.max_participants + ' คน' : 'ไม่จำกัดจำนวน' }}
                 </span>
             </p>
             <div class="scope-line">
-                <span class="scope-title">🎯 <strong>สิทธิ์เข้าร่วม:</strong></span>
+                <span class="scope-title">
+                    <AppIcon name="target" :size="14" class="inline-icon" /> <strong>สิทธิ์เข้าร่วม:</strong>
+                </span>
                 <div class="scope-tags">
                     <span
                         v-if="(!activity.target_faculties || activity.target_faculties.length === 0) && (!activity.target_majors || activity.target_majors.length === 0)"
                         class="scope-badge scope-all">
-                        🌍 ทุกคณะและสาขา
+                        <AppIcon name="globe-alt" :size="12" class="inline-icon" /> ทุกคณะและสาขา
                     </span>
                     <template v-else>
                         <span v-for="fac in activity.target_faculties" :key="'f-' + fac.faculty_id"
                             class="scope-badge scope-faculty">
-                            🏢 {{ fac.faculty_name }}
+                            <AppIcon name="building-office-2" :size="12" class="inline-icon" /> {{ fac.faculty_name }}
                         </span>
                         <span v-for="maj in activity.target_majors" :key="'m-' + maj.major_id"
                             class="scope-badge scope-major">
-                            🎓 {{ maj.major_name }}
+                            <AppIcon name="academic-cap" :size="12" class="inline-icon" /> {{ maj.major_name }}
                         </span>
                     </template>
                 </div>
@@ -46,21 +57,27 @@
         </div>
 
         <div class="card-footer">
-            <span class="qr-label">รหัส QR: <code>{{ activity.qr_code_data }}</code></span>
+            <span class="qr-label">
+                <AppIcon name="qr-code" :size="12" class="inline-icon" /> รหัส QR:
+                <code>{{ activity.qr_code_data }}</code>
+            </span>
             <div class="card-actions">
                 <button v-if="canManageRegistrations" class="btn-checkin" @click="$emit('scan-checkin', activity)"
                     title="สแกน QR Code เช็คชื่อเข้าร่วมกิจกรรม">
-                    📷 เช็คชื่อ ({{ activity.checked_in_count || 0 }}/{{ activity.registered_count || 0 }})
+                    <AppIcon name="qr-code" :size="14" class="inline-icon" /> เช็คชื่อ ({{ activity.checked_in_count ||
+                    0 }}/{{
+                        activity.registered_count || 0 }})
                 </button>
                 <button v-if="canManageRegistrations" class="btn-registrations"
                     @click="$emit('manage-registrations', activity)">
-                    👥 ผู้ลงทะเบียน ({{ activity.registered_count || 0 }})
+                    <AppIcon name="users" :size="14" class="inline-icon" /> ผู้ลงทะเบียน ({{ activity.registered_count
+                    || 0 }})
                 </button>
                 <button v-if="canCreateActivity" class="btn-edit" @click="$emit('edit', activity)">
-                    แก้ไข
+                    <AppIcon name="pencil-square" :size="14" class="inline-icon" /> แก้ไข
                 </button>
                 <button v-if="canCreateActivity" class="btn-delete" @click="$emit('delete', activity.activity_id)">
-                    ลบ
+                    <AppIcon name="trash" :size="14" class="inline-icon" /> ลบ
                 </button>
             </div>
         </div>
@@ -68,6 +85,7 @@
 </template>
 
 <script setup>
+import AppIcon from "~/components/AppIcon.vue"
 import { computed } from 'vue';
 
 const props = defineProps({

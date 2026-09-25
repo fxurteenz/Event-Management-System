@@ -6,7 +6,9 @@
                 <div class="modal-header">
                     <div class="header-info">
                         <div class="title-row">
-                            <h3>📷 สแกนเช็คชื่อเข้าร่วมกิจกรรม</h3>
+                            <h3>
+                                <AppIcon name="qr-code" :size="16" class="inline-icon" /> สแกนเช็คชื่อเข้าร่วมกิจกรรม
+                            </h3>
                             <span class="hours-tag">⭐ {{ activity?.activity_hours || 0 }} ชม.</span>
                         </div>
                         <p class="subtitle-small">
@@ -22,7 +24,7 @@
                     <div class="scanner-tabs">
                         <button type="button" class="tab-btn" :class="{ active: scannerMode === 'camera' }"
                             @click="switchMode('camera')">
-                            📷 กล้องสแกนสด (Camera)
+                            <AppIcon name="qr-code" :size="16" class="inline-icon" /> กล้องสแกนสด (Camera)
                         </button>
                         <button type="button" class="tab-btn" :class="{ active: scannerMode === 'manual' }"
                             @click="switchMode('manual')">
@@ -52,7 +54,10 @@
                                 <span>กำลังเปิดกล้อง...</span>
                             </div>
                             <div v-else-if="cameraError" class="camera-status-overlay camera-error">
-                                <span>⚠️ {{ cameraError }}</span>
+                                <span>
+                                    <AppIcon name="exclamation-triangle" :size="20"
+                                        class="inline-icon text-yellow-500" /> {{ cameraError }}
+                                </span>
                                 <button type="button" class="btn-retry-cam"
                                     @click="startCamera">ลองเปิดกล้องใหม่</button>
                             </div>
@@ -61,7 +66,7 @@
                         <!-- Camera Controls -->
                         <div class="camera-controls">
                             <button type="button" class="btn-cam-action" @click="flipCamera" :disabled="cameraLoading">
-                                🔄 สลับกล้อง (หน้า/หลัง)
+                                <AppIcon name="arrow-path" :size="16" class="inline-icon" /> สลับกล้อง (หน้า/หลัง)
                             </button>
                             <span class="cam-hint">คำแนะนำ: นำ QR Code จากหน้าจอของนักศึกษามาส่องที่หน้ากล้อง</span>
                         </div>
@@ -83,7 +88,13 @@
                                     :disabled="isProcessing" autocomplete="off" />
                                 <button type="submit" class="btn-manual-submit"
                                     :disabled="!manualCode.trim() || isProcessing">
-                                    {{ isProcessing ? 'กำลังตรวจสอบ...' : '✅ เช็คชื่อ' }}
+                                    <template v-if="isProcessing">
+                                        กำลังตรวจสอบ...
+                                    </template>
+                                    <template v-else>
+                                        <AppIcon name="check-circle" :size="16" class="inline-icon text-green-500" />
+                                        เช็คชื่อ
+                                    </template>
                                 </button>
                             </form>
                         </div>
@@ -92,7 +103,9 @@
                     <!-- SCAN RESULT FEEDBACK BANNERS -->
                     <!-- Success Banner -->
                     <div v-if="lastSuccess" class="result-banner result-success">
-                        <div class="banner-icon">🎉</div>
+                        <div class="banner-icon">
+                            <AppIcon name="check-circle" :size="24" class="inline-icon text-green-500" />
+                        </div>
                         <div class="banner-content">
                             <h4>เช็คชื่อเข้าร่วมกิจกรรมสำเร็จ!</h4>
                             <p class="stu-info">
@@ -112,7 +125,9 @@
 
                     <!-- Error / Warning Banner -->
                     <div v-if="lastError" class="result-banner result-error">
-                        <div class="banner-icon">❌</div>
+                        <div class="banner-icon">
+                            <AppIcon name="x-circle" :size="24" class="inline-icon text-red-500" />
+                        </div>
                         <div class="banner-content">
                             <h4>ไม่สามารถบันทึกการเช็คชื่อได้</h4>
                             <p class="error-msg">{{ lastError }}</p>
@@ -123,15 +138,20 @@
                     <div class="recent-feed-section">
                         <div class="feed-header">
                             <div>
-                                <h5>📋 รายชื่อผู้ที่เช็คชื่อเข้าร่วมกิจกรรมแล้ว ({{ checkedInStudents.length }} คน)</h5>
+                                <h5>
+                                    <AppIcon name="clipboard-document-list" :size="16" class="inline-icon" />
+                                    รายชื่อผู้ที่เช็คชื่อเข้าร่วมกิจกรรมแล้ว ({{ checkedInStudents.length }} คน)
+                                </h5>
                                 <span v-if="activity?.registered_count" class="feed-sub-count">
                                     จากผู้ลงทะเบียนทั้งหมด {{ activity.registered_count }} คน
                                 </span>
                             </div>
                             <button type="button" class="btn-refresh-feed" :disabled="isLoadingList"
                                 @click="fetchCheckedInList" title="ดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์">
-                                <span :class="{ 'spin-icon': isLoadingList }">🔄</span> {{ isLoadingList ?
-                                'กำลังโหลด...' : 'รีเฟรช' }}
+                                <span :class="{ 'spin-icon': isLoadingList }">
+                                    <AppIcon name="arrow-path" :size="16" class="inline-icon" />
+                                </span> {{ isLoadingList ?
+                                    'กำลังโหลด...' : 'รีเฟรช' }}
                             </button>
                         </div>
 
@@ -177,6 +197,7 @@
 </template>
 
 <script setup>
+import AppIcon from "~/components/AppIcon.vue"
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 
 const props = defineProps({

@@ -53,7 +53,7 @@
 
                     <!-- กำหนดเงื่อนไขสิทธิ์คณะและสาขาวิชา -->
                     <div class="scope-selection-card">
-                        <h4>🎯 สิทธิ์คณะและสาขาวิชาที่สามารถเข้าร่วมได้</h4>
+                        <h4><AppIcon name="target" :size="16" class="inline-icon" /> สิทธิ์คณะและสาขาวิชาที่สามารถเข้าร่วมได้</h4>
 
                         <!-- 1. ตัวเลือกคณะ -->
                         <div class="form-group mb-3">
@@ -63,11 +63,11 @@
                                     <label class="radio-label">
                                         <input type="radio" :value="true" v-model="scopeAllFaculties"
                                             @change="onToggleAllFaculties" />
-                                        🌍 ทุกคณะ (ไม่จำกัด)
+                                        <AppIcon name="globe-alt" :size="16" class="inline-icon" /> ทุกคณะ (ไม่จำกัด)
                                     </label>
                                     <label class="radio-label">
                                         <input type="radio" :value="false" v-model="scopeAllFaculties" />
-                                        🏢 ระบุคณะ (เลือกได้หลายคณะ)
+                                        <AppIcon name="building-office-2" :size="16" class="inline-icon" /> ระบุคณะ (เลือกได้หลายคณะ)
                                     </label>
                                 </div>
                             </div>
@@ -94,11 +94,11 @@
                                     <label class="radio-label">
                                         <input type="radio" :value="true" v-model="scopeAllMajors"
                                             @change="formData.target_major_ids = []" />
-                                        📚 ทุกสาขาวิชา (ไม่จำกัด)
+                                        <AppIcon name="book-open" :size="16" class="inline-icon" /> ทุกสาขาวิชา (ไม่จำกัด)
                                     </label>
                                     <label class="radio-label">
                                         <input type="radio" :value="false" v-model="scopeAllMajors" />
-                                        🎓 ระบุสาขาวิชา (เลือกได้หลายสาขา)
+                                        <AppIcon name="academic-cap" :size="16" class="inline-icon" /> ระบุสาขาวิชา (เลือกได้หลายสาขา)
                                     </label>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@
 
                     <!-- แจ้งเตือนกรณีเลือกกิจกรรมบังคับ -->
                     <div v-if="isMandatorySelected" class="mandatory-notice-box">
-                        ⚡ <strong>ระบบลงทะเบียนอัตโนมัติ (กิจกรรมบังคับ):</strong> เมื่อบันทึกกิจกรรม
+                        <AppIcon name="bolt" :size="16" class="inline-icon text-yellow-500" /> <strong>ระบบลงทะเบียนอัตโนมัติ (กิจกรรมบังคับ):</strong> เมื่อบันทึกกิจกรรม
                         ระบบจะเพิ่มรายชื่อและ <strong>ยืนยันสถานะสิทธิ์ (Confirmed)</strong>
                         ให้นักศึกษาในสังกัดคณะ/สาขาวิชาที่ระบุทันที และนักศึกษาจะไม่สามารถยกเลิกกิจกรรมนี้ได้
                     </div>
@@ -146,6 +146,7 @@
 </template>
 
 <script setup>
+import AppIcon from "~/components/AppIcon.vue"
 import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
