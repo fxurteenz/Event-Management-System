@@ -364,7 +364,7 @@ watch(
                 width: 36px;
                 height: 36px;
                 border: 3px solid #e2e8f0;
-                border-top-color: #2563eb;
+                border-top-color: #3b0764;
                 width: 38px;
                 height: 38px;
                 border: 3px solid var(--bru-purple-100, #f3e8ff);
@@ -544,9 +544,9 @@ watch(
             }
 
             .banner-attended {
-                background: #eff6ff;
+                background: #fffbeb;
                 border: 1px solid #bfdbfe;
-                color: #1e40af;
+                color: #854d0e;
                 background: var(--bru-purple-50, #faf5ff);
                 border: 1px solid var(--bru-purple-200, #e9d5ff);
                 color: var(--bru-purple-800, #581c87);

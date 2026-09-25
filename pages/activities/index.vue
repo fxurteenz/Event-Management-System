@@ -260,6 +260,15 @@ const deleteActivity = async (id) => {
 </script>
 
 <style scoped>
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
 .activities-container {
     min-height: 100vh;
     width: 100%;
@@ -267,7 +276,7 @@ const deleteActivity = async (id) => {
     overflow-x: hidden;
     background-color: #f8fafc;
     color: #1e293b;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-body, 'Sarabun', sans-serif);
 }
 
 .main-layout {
@@ -301,7 +310,7 @@ const deleteActivity = async (id) => {
 }
 
 .btn-create {
-    background-color: #2563eb;
+    background-color: #3b0764;
     color: white;
     border: none;
     padding: 0.65rem 1.25rem;
@@ -309,26 +318,26 @@ const deleteActivity = async (id) => {
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 2px 4px rgba(59, 7, 100, 0.2);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     gap: 0.5rem;
 }
 
 .btn-create:hover {
-    background-color: #1d4ed8;
+    background-color: #581c87;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 4px 8px rgba(59, 7, 100, 0.3);
 }
 
 /* Permission Notice */
 .permission-notice {
-    background-color: #eff6ff;
-    border-left: 4px solid #3b82f6;
+    background-color: #fffbeb;
+    border-left: 4px solid #ca8a04;
     padding: 0.85rem 1.25rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
-    color: #1e40af;
+    color: #854d0e;
     font-size: 0.92rem;
     line-height: 1.5;
 }
@@ -338,9 +347,9 @@ const deleteActivity = async (id) => {
 }
 
 .notice-club {
-    background-color: #f0fdf4;
-    border-left-color: #22c55e;
-    color: #166534;
+    background-color: #f3e8ff;
+    border-left-color: #9333ea;
+    color: #581c87;
 }
 
 /* Grid & Cards */

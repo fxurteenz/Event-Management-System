@@ -63,13 +63,13 @@
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'all' }" @click="changeFilterTab('all')">
                             <AppIcon name="clipboard-document-list" :size="16" class="inline-icon" /> ทั้งหมด ({{
-                            registrationsList.length }})
+                                registrationsList.length }})
                         </button>
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'cancelled' }"
                             @click="changeFilterTab('cancelled')">
                             <AppIcon name="x-circle" :size="24" class="inline-icon text-red-500" /> ยกเลิกแล้ว ({{
-                            cancelledRegistrationsCount }})
+                                cancelledRegistrationsCount }})
                         </button>
                     </div>
 
@@ -116,6 +116,15 @@
                                             `(${maj.faculty_name})` : '' }}
                                     </option>
                                 </select>
+                            </div>
+
+                            <!-- Print button -->
+                            <div class="filter-field">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn-print" @click="printCurrentList"
+                                    title="พิมพ์รายชื่อตามตัวกรอง">
+                                    <AppIcon name="printer" :size="20" />
+                                </button>
                             </div>
 
                             <!-- Clear Filters -->
@@ -230,7 +239,7 @@
                                         <span v-if="reg.check_in_time" class="checkin-badge-yes"
                                             :title="formatDateTime(reg.check_in_time)">
                                             <AppIcon name="clock" :size="16" class="inline-icon" /> {{
-                                            formatTimeOnly(reg.check_in_time) }}
+                                                formatTimeOnly(reg.check_in_time) }}
                                         </span>
                                         <span v-else class="checkin-badge-no">
                                             ⏳ ยังไม่เช็คชื่อ
@@ -282,14 +291,14 @@
                                     <h3>
                                         <AppIcon name="users" :size="16" class="inline-icon" /> เลือกจากรายชื่อนักศึกษา:
                                         {{
-                                        activity?.title }}
+                                            activity?.title }}
                                     </h3>
                                 </div>
                                 <p class="subtitle-small">
                                     เพิ่มรายชื่อนักศึกษาเข้าร่วมกิจกรรม (รายบุคคลหรือทั้งสาขา/คณะ)
                                     <span v-if="userRole === 'club_president'" class="target-scope-tag">
                                         <AppIcon name="building-library" :size="16" class="inline-icon" /> สังกัด: {{
-                                        userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
+                                            userFacultyName }} (เลือกได้ทุกสาขาในคณะ)
                                     </span>
                                     <span v-else class="target-scope-tag"
                                         :class="{ 'open-scope': !activity?.target_majors?.length && !activity?.target_faculties?.length }">
@@ -328,7 +337,7 @@
                                         </label>
                                         <div v-if="userRole === 'club_president'" class="locked-faculty-badge">
                                             <AppIcon name="lock-closed" :size="16" class="inline-icon" /> {{
-                                            userFacultyName }}
+                                                userFacultyName }}
                                         </div>
                                         <select v-else v-model="candidateFacultyId" class="filter-select"
                                             @change="candidateMajorId = ''">
@@ -740,6 +749,176 @@ const changeFilterTab = (tab) => {
     selectedRegistrationIds.value = []
 }
 
+const printCurrentList = () => {
+    if (!displayedRegistrations.value || displayedRegistrations.value.length === 0) {
+        alert('ไม่มีข้อมูลสำหรับพิมพ์');
+        return;
+    }
+    const act = props.activity;
+
+    const tabNames = {
+        'active': 'ผู้เข้าร่วมปัจจุบัน',
+        'unconfirmed': 'ยังไม่ยืนยัน',
+        'checked_in': 'เช็คชื่อแล้ว',
+        'all': 'ทั้งหมด',
+        'cancelled': 'ยกเลิกแล้ว'
+    };
+    const currentTabName = tabNames[registrationStatusFilter.value] || 'ทั้งหมด';
+    const printedAt = formatDateTime(new Date().toISOString());
+
+    let printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>รายชื่อผู้ลงทะเบียน - ${act.title || 'กิจกรรม'}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+                body { 
+                    font-family: 'Sarabun', sans-serif; 
+                    padding: 24px; 
+                    color: #1e293b;
+                    background: #fff;
+                    margin: 0;
+                }
+                .report-header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    border-bottom: 2px solid #3b0764;
+                    padding-bottom: 14px;
+                }
+                h2 { margin: 0 0 6px 0; font-size: 20px; color: #3b0764; }
+                h3 { margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #334155; }
+                .meta { 
+                    font-size: 13px; 
+                    color: #64748b;
+                    display: flex;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    margin-top: 8px;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    font-size: 13px; 
+                    margin-top: 10px;
+                }
+                th, td { 
+                    border: 1px solid #cbd5e1; 
+                    padding: 8px 10px; 
+                    text-align: left; 
+                    vertical-align: middle;
+                }
+                th { 
+                    background-color: #f8fafc; 
+                    font-weight: 600; 
+                    color: #334155;
+                }
+                tr:nth-child(even) { background-color: #fdfdfe; }
+                .status-confirmed { color: #15803d; font-weight: 600; }
+                .status-cancelled { color: #b91c1c; font-weight: 600; }
+                .status-unconfirmed { color: #b45309; font-weight: 600; }
+                .checkin-yes { color: #166534; font-weight: 600; }
+                .checkin-no { color: #64748b; }
+                .checkin-time { font-size: 11px; color: #475569; margin-top: 2px; }
+                @media print {
+                    @page { margin: 1.2cm; size: A4 portrait; }
+                    body { padding: 0; }
+                    th { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #f1f5f9 !important; }
+                    tr:nth-child(even) { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #f8fafc !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="report-header">
+                <h2>รายชื่อผู้ลงทะเบียนเข้าร่วมกิจกรรม</h2>
+                <h3>${act.title || '-'}</h3>
+                <div class="meta">
+                    <span><strong>ตัวกรอง:</strong> ${currentTabName} (${displayedRegistrations.value.length} รายการ)</span>
+                    <span><strong>รหัสกิจกรรม:</strong> ${act.activity_id || '-'}</span>
+                    <span><strong>พิมพ์เมื่อ:</strong> ${printedAt}</span>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 45px; text-align: center;">ลำดับ</th>
+                        <th style="width: 115px; text-align: center;">รหัสนักศึกษา</th>
+                        <th>ชื่อ - นามสกุล</th>
+                        <th>คณะ</th>
+                        <th>สาขาวิชา</th>
+                        <th style="width: 110px; text-align: center;">สถานะการลงทะเบียน</th>
+                        <th style="width: 145px; text-align: center;">การเช็คชื่อ</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    displayedRegistrations.value.forEach((reg, index) => {
+        const statusLower = (reg.status || '').toLowerCase();
+        let statusBadge = '<span class="status-unconfirmed">ยังไม่ยืนยัน</span>';
+        if (statusLower === 'confirmed') {
+            statusBadge = '<span class="status-confirmed">ยืนยันแล้ว</span>';
+        } else if (statusLower === 'cancelled') {
+            statusBadge = '<span class="status-cancelled">ยกเลิกแล้ว</span>';
+        }
+
+        let checkInBadge = '<span class="checkin-no">ยังไม่เช็คชื่อ</span>';
+        if (reg.check_in_time) {
+            const timeStr = formatDateTime(reg.check_in_time);
+            checkInBadge = `<span class="checkin-yes">✓ เช็คชื่อแล้ว</span><div class="checkin-time">${timeStr}</div>`;
+        }
+
+        printContent += `
+            <tr>
+                <td style="text-align: center;">${index + 1}</td>
+                <td style="text-align: center;"><code>${reg.student_id || '-'}</code></td>
+                <td>${reg.first_name || ''} ${reg.last_name || ''}</td>
+                <td>${reg.faculty_name || '-'}</td>
+                <td>${reg.major_name || '-'}</td>
+                <td style="text-align: center;">${statusBadge}</td>
+                <td style="text-align: center;">${checkInBadge}</td>
+            </tr>
+        `;
+    });
+
+    printContent += `
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+
+    // Use an invisible iframe for printing to prevent popup blockers and parent freezing issues
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(printContent);
+    iframeDoc.close();
+
+    // Delay printing slightly to ensure styles (like fonts) are loaded and applied
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+
+        // Cleanup after print dialog is closed
+        setTimeout(() => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        }, 1000);
+    }, 500);
+}
+
+
 // Fetch Registrations
 const fetchRegistrations = async () => {
     if (!props.activity) return
@@ -1080,6 +1259,15 @@ const formatDateTime = (dateStr) => {
 </script>
 
 <style scoped>
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
 /* Modal Transitions */
 .modal-enter-active,
 .modal-leave-active {
@@ -1192,9 +1380,9 @@ const formatDateTime = (dateStr) => {
 
 /* Alerts */
 .role-scope-alert {
-    background-color: #eff6ff;
-    border-left: 4px solid #3b82f6;
-    color: #1e40af;
+    background-color: #fffbeb;
+    border-left: 4px solid #9333ea;
+    color: #854d0e;
     padding: 0.75rem 1rem;
     border-radius: 6px;
     font-size: 0.88rem;
@@ -1234,9 +1422,9 @@ const formatDateTime = (dateStr) => {
 }
 
 .reg-tab-btn.active {
-    background: #2563eb;
+    background: #3b0764;
     color: white;
-    border-color: #1d4ed8;
+    border-color: #581c87;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
@@ -1283,7 +1471,7 @@ const formatDateTime = (dateStr) => {
 
 .filter-input:focus,
 .filter-select:focus {
-    border-color: #3b82f6;
+    border-color: #9333ea;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
@@ -1316,6 +1504,24 @@ const formatDateTime = (dateStr) => {
 .btn-clear-filters:hover {
     background: #cbd5e1;
     color: #0f172a;
+}
+
+.btn-print {
+    background: #3b0764;
+    /* Royal Purple */
+    color: white;
+    border: none;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-print:hover {
+    background: #581c87;
 }
 
 /* Bulk Action Bar with Smooth Transition */
@@ -1462,7 +1668,7 @@ const formatDateTime = (dateStr) => {
     width: 28px;
     height: 28px;
     border: 3px solid #e2e8f0;
-    border-top-color: #2563eb;
+    border-top-color: #3b0764;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -1694,7 +1900,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .btn-select-from-list {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #9333ea 0%, #3b0764 100%);
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -1710,7 +1916,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .btn-select-from-list:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3b0764 0%, #581c87 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
 }
@@ -1812,7 +2018,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .selected-pill {
-    background: #3b82f6;
+    background: #9333ea;
     color: white;
     font-size: 0.8rem;
     padding: 0.2rem 0.65rem;
@@ -1886,7 +2092,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .candidate-table tbody tr.selected-row {
-    background-color: #eff6ff;
+    background-color: #fffbeb;
 }
 
 .candidate-table tbody tr.disabled-row {

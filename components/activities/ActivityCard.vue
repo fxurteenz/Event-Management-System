@@ -3,7 +3,7 @@
         <div class="card-top">
             <span class="badge" :class="{ 'badge-mandatory': isMandatory }">
                 <AppIcon v-if="isMandatory" name="star" :size="12" class="inline-icon" />{{ activity.category_name ||
-                'กิจกรรมทั่วไป' }}
+                    'กิจกรรมทั่วไป' }}
             </span>
             <span class="hours-badge">
                 <AppIcon name="clock" :size="12" class="inline-icon" /> {{ activity.activity_hours }} ชั่วโมง
@@ -65,20 +65,22 @@
                 <button v-if="canManageRegistrations" class="btn-checkin" @click="$emit('scan-checkin', activity)"
                     title="สแกน QR Code เช็คชื่อเข้าร่วมกิจกรรม">
                     <AppIcon name="qr-code" :size="14" class="inline-icon" /> เช็คชื่อ ({{ activity.checked_in_count ||
-                    0 }}/{{
+                        0 }}/{{
                         activity.registered_count || 0 }})
                 </button>
                 <button v-if="canManageRegistrations" class="btn-registrations"
                     @click="$emit('manage-registrations', activity)">
                     <AppIcon name="users" :size="14" class="inline-icon" /> ผู้ลงทะเบียน ({{ activity.registered_count
-                    || 0 }})
+                        || 0 }})
                 </button>
-                <button v-if="canCreateActivity" class="btn-edit" @click="$emit('edit', activity)">
-                    <AppIcon name="pencil-square" :size="14" class="inline-icon" /> แก้ไข
-                </button>
-                <button v-if="canCreateActivity" class="btn-delete" @click="$emit('delete', activity.activity_id)">
-                    <AppIcon name="trash" :size="14" class="inline-icon" /> ลบ
-                </button>
+                <div v-if="canCreateActivity" class="admin-actions">
+                    <button class="btn-edit" @click="$emit('edit', activity)">
+                        <AppIcon name="pencil-square" :size="14" class="inline-icon" /> แก้ไข
+                    </button>
+                    <button class="btn-delete" @click="$emit('delete', activity.activity_id)">
+                        <AppIcon name="trash" :size="14" class="inline-icon" /> ลบ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -126,6 +128,15 @@ const formatDateTime = (dateStr) => {
 </script>
 
 <style scoped>
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
 .activity-card {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
@@ -143,7 +154,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .card-mandatory {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid #ca8a04;
 }
 
 .card-top {
@@ -154,8 +165,8 @@ const formatDateTime = (dateStr) => {
 }
 
 .badge {
-    background: #e0f2fe;
-    color: #0369a1;
+    background: #f3e8ff;
+    color: #6b21a8;
     padding: 0.25rem 0.6rem;
     border-radius: 9999px;
     font-size: 0.8rem;
@@ -260,8 +271,8 @@ const formatDateTime = (dateStr) => {
 }
 
 .scope-major {
-    background: #ecfdf5;
-    color: #065f46;
+    background: #fefce8;
+    color: #a16207;
 }
 
 .card-footer {
@@ -294,6 +305,13 @@ const formatDateTime = (dateStr) => {
     flex-wrap: wrap;
 }
 
+.admin-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
 .btn-checkin {
     background-color: #059669;
     color: white;
@@ -316,7 +334,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .btn-registrations {
-    background-color: #0284c7;
+    background-color: #581c87;
     color: white;
     border: none;
     padding: 0.4rem 0.8rem;
@@ -328,7 +346,7 @@ const formatDateTime = (dateStr) => {
 }
 
 .btn-registrations:hover {
-    background-color: #0369a1;
+    background-color: #3b0764;
     transform: translateY(-1px);
 }
 
@@ -358,7 +376,6 @@ const formatDateTime = (dateStr) => {
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    margin-left: auto;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

@@ -271,6 +271,11 @@ const handleSubmit = () => {
 </script>
 
 <style scoped>
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
 /* Modal Transition */
 .modal-enter-active,
 .modal-leave-active {
@@ -403,8 +408,8 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: #9333ea;
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
 }
 
 /* Scope Selection Card */
@@ -476,9 +481,9 @@ textarea:focus {
 }
 
 .item-checked {
-    background-color: #eff6ff;
+    background-color: #f3e8ff;
     font-weight: 500;
-    color: #1d4ed8;
+    color: #6b21a8;
 }
 
 .text-muted {
@@ -489,7 +494,7 @@ textarea:focus {
 .mandatory-notice-box {
     background: #fffbeb;
     border: 1px solid #fef3c7;
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid #ca8a04;
     padding: 0.75rem 1rem;
     border-radius: 6px;
     font-size: 0.85rem;
@@ -522,7 +527,7 @@ textarea:focus {
 }
 
 .btn-submit {
-    background: #2563eb;
+    background: #3b0764;
     color: white;
     border: none;
     padding: 0.55rem 1.5rem;
@@ -533,7 +538,7 @@ textarea:focus {
 }
 
 .btn-submit:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: #581c87;
 }
 
 .btn-submit:disabled {

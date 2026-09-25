@@ -552,6 +552,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading, 'Prompt', sans-serif);
+}
+
 .checkin-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -679,7 +684,7 @@ onBeforeUnmount(() => {
 
 .tab-btn.active {
     background: #ffffff;
-    color: #2563eb;
+    color: #3b0764;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -717,7 +722,7 @@ onBeforeUnmount(() => {
     position: absolute;
     width: 24px;
     height: 24px;
-    border-color: #38bdf8;
+    border-color: #d8b4fe;
     border-style: solid;
 }
 
@@ -754,8 +759,8 @@ onBeforeUnmount(() => {
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, #38bdf8, #60a5fa, transparent);
-    box-shadow: 0 0 8px #38bdf8;
+    background: linear-gradient(90deg, transparent, #d8b4fe, #c084fc, transparent);
+    box-shadow: 0 0 8px #d8b4fe;
     animation: laserScan 2s ease-in-out infinite;
 }
 
@@ -805,13 +810,13 @@ onBeforeUnmount(() => {
     width: 32px;
     height: 32px;
     border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #38bdf8;
+    border-top-color: #d8b4fe;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
 .btn-retry-cam {
-    background: #3b82f6;
+    background: #9333ea;
     color: #ffffff;
     border: none;
     padding: 0.4rem 1rem;
@@ -879,12 +884,12 @@ onBeforeUnmount(() => {
 
 .manual-input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #3b0764;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .btn-manual-submit {
-    background: #2563eb;
+    background: #3b0764;
     color: #ffffff;
     border: none;
     padding: 0.65rem 1.25rem;
@@ -897,7 +902,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-manual-submit:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: #581c87;
 }
 
 .btn-manual-submit:disabled {
@@ -1157,7 +1162,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-done {
-    background: #2563eb;
+    background: #3b0764;
     color: #ffffff;
     border: none;
     padding: 0.5rem 1.5rem;
@@ -1169,6 +1174,6 @@ onBeforeUnmount(() => {
 }
 
 .btn-done:hover {
-    background: #1d4ed8;
+    background: #581c87;
 }
 </style>
