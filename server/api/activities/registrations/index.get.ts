@@ -1,20 +1,22 @@
-import db from '../../../utils/db';
+import db from "../../../utils/db";
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event);
-  const activityId = query.activity_id;
-  const role = ((query.role as string) || '').toLowerCase();
-  const presidentFacultyId = query.faculty_id ? Number(query.faculty_id) : null;
+    const query = getQuery(event);
+    const activityId = query.activity_id;
+    const role = ((query.role as string) || "").toLowerCase();
+    const presidentFacultyId = query.faculty_id
+        ? Number(query.faculty_id)
+        : null;
 
-  if (!activityId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Activity ID is required',
-    });
-  }
+    if (!activityId) {
+        throw createError({
+            statusCode: 400,
+            statusMessage: "Activity ID is required",
+        });
+    }
 
-  try {
-    let sql = `
+    try {
+        let sql = `
       SELECT 
         ar.registration_id,
         ar.activity_id,
@@ -36,36 +38,44 @@ export default defineEventHandler(async (event) => {
       WHERE ar.activity_id = ?
     `;
 
-    const params: any[] = [activityId];
+        const params: any[] = [activityId];
 
-    // Restriction for Club President: ONLY view students from the same faculty!
-    if (role === 'club_president') {
-      if (!presidentFacultyId) {
+        // Restriction for Club President: ONLY view students from the same faculty!
+        if (role === "club_president") {
+            if (!presidentFacultyId) {
+                throw createError({
+                    statusCode: 403,
+                    statusMessage:
+                        "ไม่พบข้อมูลสังกัดคณะของประธานสโมสร ไม่สามารถเข้าถึงข้อมูลได้",
+                });
+            }
+            sql += " AND s.faculty_id = ?";
+            params.push(presidentFacultyId);
+        }
+
+        const checkedInOnly =
+            query.checked_in_only === "true" || query.checked_in_only === "1";
+        if (checkedInOnly) {
+            sql +=
+                " AND ar.check_in_time IS NOT NULL ORDER BY ar.check_in_time DESC";
+        } else {
+            sql += " ORDER BY ar.registered_at DESC";
+        }
+
+        const [rows]: any = await db.execute(sql, params);
+
+        return {
+            success: true,
+            data: rows,
+            is_restricted_faculty: role === "club_president",
+            filtered_faculty_id: presidentFacultyId,
+        };
+    } catch (error: any) {
+        if (error.statusCode) throw error;
         throw createError({
-          statusCode: 403,
-          statusMessage: 'ไม่พบข้อมูลสังกัดคณะของประธานสโมสร ไม่สามารถเข้าถึงข้อมูลได้',
+            statusCode: 500,
+            statusMessage: "Error fetching registrations",
+            data: error.message,
         });
-      }
-      sql += ' AND s.faculty_id = ?';
-      params.push(presidentFacultyId);
     }
-
-    sql += ' ORDER BY ar.registered_at DESC';
-
-    const [rows]: any = await db.execute(sql, params);
-
-    return {
-      success: true,
-      data: rows,
-      is_restricted_faculty: role === 'club_president',
-      filtered_faculty_id: presidentFacultyId
-    };
-  } catch (error: any) {
-    if (error.statusCode) throw error;
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Error fetching registrations',
-      data: error.message,
-    });
-  }
 });

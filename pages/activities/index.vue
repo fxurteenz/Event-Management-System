@@ -57,6 +57,10 @@
             :user-role="userRole" :current-user="currentUser" :faculties="faculties" :majors="majors"
             @close="closeRegistrationsModal" @updated="refresh" />
 
+        <!-- Component: Activity Check-In Scanner Modal -->
+        <ActivityCheckInModal :show="showCheckInModal" :activity="currentScanningActivity" :user-role="userRole"
+            :current-user="currentUser" @close="closeCheckInModal" @checked-in="onCheckedIn" />
+
         <!-- รายการกิจกรรม (Activity Cards Grid) -->
         <div class="card">
             <!-- Loading State: แสดงเฉพาะเมื่อยังไม่มีข้อมูลและกำลังโหลดครั้งแรก -->
@@ -82,7 +86,8 @@
                     <!-- Component: Activity Card -->
                     <ActivityCard v-for="act in activities" :key="act.activity_id" :activity="act"
                         :can-create-activity="canCreateActivity" :can-manage-registrations="canManageRegistrations"
-                        @manage-registrations="openRegistrationsModal" @edit="openEditModal" @delete="deleteActivity" />
+                        @manage-registrations="openRegistrationsModal" @scan-checkin="openCheckInModal"
+                        @edit="openEditModal" @delete="deleteActivity" />
                 </div>
             </div>
         </div>
@@ -94,6 +99,7 @@ import { ref, computed } from 'vue'
 import ActivityCard from '~/components/activities/ActivityCard.vue'
 import ActivityFormModal from '~/components/activities/ActivityFormModal.vue'
 import ActivityRegistrationsModal from '~/components/activities/ActivityRegistrationsModal.vue'
+import ActivityCheckInModal from '~/components/activities/ActivityCheckInModal.vue'
 
 const authCookie = useCookie('auth_user')
 const currentUser = computed(() => authCookie.value || null)
@@ -154,6 +160,24 @@ const openRegistrationsModal = (act) => {
 const closeRegistrationsModal = () => {
     showRegistrationsModal.value = false
     currentManagingActivity.value = null
+}
+
+// Scanner Check-In Modal State
+const showCheckInModal = ref(false)
+const currentScanningActivity = ref(null)
+
+const openCheckInModal = (act) => {
+    currentScanningActivity.value = act
+    showCheckInModal.value = true
+}
+
+const closeCheckInModal = () => {
+    showCheckInModal.value = false
+    currentScanningActivity.value = null
+}
+
+const onCheckedIn = () => {
+    refresh()
 }
 
 const toDateTimeLocal = (dateStr) => {

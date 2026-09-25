@@ -17,6 +17,9 @@
                         </p>
                     </div>
                     <div class="modal-header-actions">
+                        <button type="button" class="btn-open-scanner" @click="openCheckInModal">
+                            📷 สแกน QR เช็คชื่อ
+                        </button>
                         <button v-if="canAddFromList" type="button" class="btn-select-from-list"
                             @click="openCandidateModal">
                             👥 เลือกจากรายชื่อ
@@ -46,6 +49,11 @@
                             :class="{ active: registrationStatusFilter === 'unconfirmed' }"
                             @click="changeFilterTab('unconfirmed')">
                             ⏳ ยังไม่ยืนยัน ({{ unconfirmedRegistrationsCount }})
+                        </button>
+                        <button type="button" class="reg-tab-btn"
+                            :class="{ active: registrationStatusFilter === 'checked_in' }"
+                            @click="changeFilterTab('checked_in')">
+                            🎉 เช็คชื่อแล้ว ({{ checkedInRegistrationsCount }})
                         </button>
                         <button type="button" class="reg-tab-btn"
                             :class="{ active: registrationStatusFilter === 'all' }" @click="changeFilterTab('all')">
@@ -172,6 +180,7 @@
                                     <th>สาขาวิชา</th>
                                     <th>วันที่ลงทะเบียน</th>
                                     <th>สถานะ</th>
+                                    <th>เวลาเช็คชื่อ</th>
                                     <th>การจัดการ</th>
                                 </tr>
                             </thead>
@@ -195,7 +204,23 @@
                                         </span>
                                     </td>
                                     <td>
+                                        <span v-if="reg.check_in_time" class="checkin-badge-yes"
+                                            :title="formatDateTime(reg.check_in_time)">
+                                            🕒 {{ formatTimeOnly(reg.check_in_time) }}
+                                        </span>
+                                        <span v-else class="checkin-badge-no">
+                                            ⏳ ยังไม่เช็คชื่อ
+                                        </span>
+                                    </td>
+                                    <td>
                                         <div class="action-btns">
+                                            <!-- Manual Check-in Button: Available if confirmed and not yet checked-in -->
+                                            <button
+                                                v-if="(reg.status || '').toLowerCase() === 'confirmed' && !reg.check_in_time"
+                                                class="btn-act-checkin" @click="manualCheckInStudent(reg)"
+                                                title="เช็คชื่อเข้าร่วมกิจกรรม">
+                                                📷 เช็คชื่อ
+                                            </button>
                                             <button v-if="(reg.status || '').toLowerCase() !== 'confirmed'"
                                                 class="btn-act-confirm"
                                                 @click="updateRegistrationStatus(reg.registration_id, 'confirmed')">
@@ -240,7 +265,7 @@
                                     <span v-else class="target-scope-tag"
                                         :class="{ 'open-scope': !activity?.target_majors?.length && !activity?.target_faculties?.length }">
                                         {{ !activity?.target_majors?.length && !activity?.target_faculties?.length ?
-                                        '🌐' : '🎯 ' }}{{ activityTargetScopeText }}
+                                            '🌐' : '🎯 ' }}{{ activityTargetScopeText }}
                                     </span>
                                 </p>
                             </div>
@@ -411,12 +436,17 @@
                     </div>
                 </div>
             </Transition>
+
+            <!-- Activity Check-In Scanner Sub-Modal -->
+            <ActivityCheckInModal :show="showCheckInModal" :activity="activity" :user-role="userRole"
+                :current-user="currentUser" @close="closeCheckInModal" @checked-in="onScannerCheckedIn" />
         </div>
     </Transition>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import ActivityCheckInModal from '~/components/activities/ActivityCheckInModal.vue'
 
 const props = defineProps({
     show: {
@@ -450,9 +480,51 @@ const emit = defineEmits(['close', 'updated'])
 // Registration State
 const registrationsList = ref([])
 const loadingRegistrations = ref(false)
-const registrationStatusFilter = ref('active') // 'active', 'unconfirmed', 'all', 'cancelled'
+const registrationStatusFilter = ref('active') // 'active', 'unconfirmed', 'checked_in', 'all', 'cancelled'
 const selectedRegistrationIds = ref([])
 const isBulkUpdating = ref(false)
+
+// Check-In Scanner Modal State
+const showCheckInModal = ref(false)
+const openCheckInModal = () => {
+    showCheckInModal.value = true
+}
+const closeCheckInModal = () => {
+    showCheckInModal.value = false
+}
+const onScannerCheckedIn = () => {
+    fetchRegistrations()
+    emit('updated')
+}
+
+// Manual Check-in Handler
+const manualCheckInStudent = async (reg) => {
+    if (!confirm(`ยืนยันการเช็คชื่อให้กับ ${reg.first_name} ${reg.last_name} (${reg.student_id}) ?`)) return
+    try {
+        const res = await $fetch('/api/activities/check-in', {
+            method: 'POST',
+            body: {
+                activity_id: props.activity.activity_id,
+                student_id: reg.student_id,
+                operator_role: props.userRole,
+                operator_faculty_id: props.currentUser?.faculty_id || null
+            }
+        })
+        if (res.success) {
+            alert(`✅ เช็คชื่อสำเร็จ: ${reg.first_name} ${reg.last_name} (+${res.data?.added_hours} ชม.)`)
+            fetchRegistrations()
+            emit('updated')
+        }
+    } catch (err) {
+        alert(err.data?.statusMessage || err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ')
+    }
+}
+
+const formatTimeOnly = (dateStr) => {
+    if (!dateStr) return '-'
+    const d = new Date(dateStr)
+    return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+}
 
 // Filter & Search Controls
 const searchQuery = ref('')
@@ -491,6 +563,10 @@ const activeRegistrationsCount = computed(() => {
 
 const unconfirmedRegistrationsCount = computed(() => {
     return registrationsList.value.filter(r => (r.status || '').toLowerCase() === 'registered').length
+})
+
+const checkedInRegistrationsCount = computed(() => {
+    return registrationsList.value.filter(r => !!r.check_in_time).length
 })
 
 const cancelledRegistrationsCount = computed(() => {
@@ -539,6 +615,8 @@ const displayedRegistrations = computed(() => {
         list = list.filter(r => (r.status || '').toLowerCase() !== 'cancelled')
     } else if (registrationStatusFilter.value === 'unconfirmed') {
         list = list.filter(r => (r.status || '').toLowerCase() === 'registered')
+    } else if (registrationStatusFilter.value === 'checked_in') {
+        list = list.filter(r => !!r.check_in_time)
     } else if (registrationStatusFilter.value === 'cancelled') {
         list = list.filter(r => (r.status || '').toLowerCase() === 'cancelled')
     }
@@ -1500,6 +1578,74 @@ const formatDateTime = (dateStr) => {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+.btn-open-scanner {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-open-scanner:hover {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(5, 150, 105, 0.3);
+}
+
+.checkin-badge-yes {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.checkin-badge-no {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-act-checkin {
+    background-color: #059669;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.btn-act-checkin:hover {
+    background-color: #047857;
+    transform: translateY(-1px);
 }
 
 .btn-select-from-list {

@@ -50,7 +50,8 @@ export default defineEventHandler(async (event) => {
         c.category_name,
         a.qr_code_data,
         a.max_participants,
-        (SELECT COUNT(*) FROM Activity_Registrations ar WHERE ar.activity_id = a.activity_id AND LOWER(ar.status) != 'cancelled') AS registered_count
+        (SELECT COUNT(*) FROM Activity_Registrations ar WHERE ar.activity_id = a.activity_id AND LOWER(ar.status) != 'cancelled') AS registered_count,
+        (SELECT COUNT(*) FROM Activity_Registrations ar WHERE ar.activity_id = a.activity_id AND ar.check_in_time IS NOT NULL) AS checked_in_count
       FROM Activities a
       LEFT JOIN Activity_Categories c ON a.category_id = c.category_id
       ORDER BY a.start_time ASC

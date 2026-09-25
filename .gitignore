@@ -3,6 +3,7 @@
 .DS*
 .prettierrc
 .nuxt
+.output
 scratch
 node_modules
 tsconfig.json

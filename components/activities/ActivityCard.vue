@@ -48,6 +48,10 @@
         <div class="card-footer">
             <span class="qr-label">รหัส QR: <code>{{ activity.qr_code_data }}</code></span>
             <div class="card-actions">
+                <button v-if="canManageRegistrations" class="btn-checkin" @click="$emit('scan-checkin', activity)"
+                    title="สแกน QR Code เช็คชื่อเข้าร่วมกิจกรรม">
+                    📷 เช็คชื่อ ({{ activity.checked_in_count || 0 }}/{{ activity.registered_count || 0 }})
+                </button>
                 <button v-if="canManageRegistrations" class="btn-registrations"
                     @click="$emit('manage-registrations', activity)">
                     👥 ผู้ลงทะเบียน ({{ activity.registered_count || 0 }})
@@ -81,7 +85,7 @@ const props = defineProps({
     }
 });
 
-defineEmits(['manage-registrations', 'edit', 'delete']);
+defineEmits(['manage-registrations', 'scan-checkin', 'edit', 'delete']);
 
 const isMandatory = computed(() => {
     const catId = Number(props.activity.category_id)
@@ -270,6 +274,27 @@ const formatDateTime = (dateStr) => {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.btn-checkin {
+    background-color: #059669;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-checkin:hover {
+    background-color: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);
 }
 
 .btn-registrations {
