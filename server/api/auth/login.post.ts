@@ -45,18 +45,28 @@ export default defineEventHandler(async (event) => {
         // ค้นหาข้อมูลนักศึกษาและสังกัดคณะ/สาขาที่ผูกกับ User นี้ (ถ้ามี)
         let studentInfo: any = null;
         const [studentRows]: any = await db.execute(
-          `SELECT s.student_id, s.first_name, s.last_name, s.faculty_id, s.major_id, f.faculty_name, m.major_name
+            `SELECT s.student_id, s.first_name, s.last_name, s.faculty_id, s.major_id, s.accumulated_hours, f.faculty_name, m.major_name
            FROM Students s
            LEFT JOIN Faculties f ON s.faculty_id = f.faculty_id
            LEFT JOIN Majors m ON s.major_id = m.major_id
            WHERE s.user_id = ?`,
-          [user.user_id]
+            [user.user_id],
         );
         if (studentRows.length > 0) {
-          studentInfo = studentRows[0];
+            studentInfo = studentRows[0];
         }
 
         const facultyId = studentInfo?.faculty_id || user.faculty_id || null;
+        let facultyName = studentInfo?.faculty_name || null;
+        if (!facultyName && facultyId) {
+            const [facRows]: any = await db.execute(
+                "SELECT faculty_name FROM Faculties WHERE faculty_id = ?",
+                [facultyId],
+            );
+            if (facRows.length > 0) {
+                facultyName = facRows[0].faculty_name;
+            }
+        }
 
         return {
             message: "Login successful",
@@ -65,12 +75,15 @@ export default defineEventHandler(async (event) => {
                 username: user.username,
                 role: user.role,
                 faculty_id: facultyId,
-                faculty_name: studentInfo?.faculty_name || null,
+                faculty_name: facultyName,
                 student_id: studentInfo?.student_id || null,
                 first_name: studentInfo?.first_name || null,
                 last_name: studentInfo?.last_name || null,
                 major_id: studentInfo?.major_id || null,
-                major_name: studentInfo?.major_name || null
+                major_name: studentInfo?.major_name || null,
+                accumulated_hours: studentInfo?.accumulated_hours
+                    ? Number(studentInfo.accumulated_hours)
+                    : 0,
             },
             token: "dummy-jwt-token-replace-me",
         };

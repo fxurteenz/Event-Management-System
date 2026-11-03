@@ -14,6 +14,13 @@
             <path d="M9 12h6m-6 4h4" />
         </g>
 
+        <!-- chart-bar: แดชบอร์ด / สถิติ -->
+        <g v-else-if="name === 'chart-bar' || name === 'dashboard'">
+            <line x1="12" y1="20" x2="12" y2="10" />
+            <line x1="18" y1="20" x2="18" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="16" />
+        </g>
+
         <!-- cog-6-tooth: เมนูผู้ดูแลระบบ -->
         <g v-else-if="name === 'cog-6-tooth' || name === 'settings'">
             <circle cx="12" cy="12" r="3" />

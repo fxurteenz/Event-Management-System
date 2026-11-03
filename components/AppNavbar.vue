@@ -21,27 +21,47 @@
         <!-- Nav Actions: Desktop & Responsive Drawer on Mobile (Floating Overlay) -->
         <nav class="nav-actions" :class="{ 'mobile-open': isMobileMenuOpen }">
             <template v-if="currentUser">
-                <!-- ถ้าอยู่ในหน้ากิจกรรม ให้ลิงก์กลับไปปฏิทิน -->
+                <!-- ถ้าไม่ได้อยู่ในหน้าแรก ให้ลิงก์กลับไปปฏิทิน -->
                 <NuxtLink v-if="route.path !== '/'" to="/" class="btn-nav btn-org" @click="isMobileMenuOpen = false">
                     <AppIcon name="calendar" :size="16" />
-                    <span>ปฏิทินกิจกรรม</span>
+                    <span>ปฏิทิน</span>
                 </NuxtLink>
-                <!-- ถ้าอยู่ในหน้าแรก ให้ลิงก์ไปจัดการกิจกรรม -->
-                <NuxtLink v-else-if="isOrgPresident || isClubPresident" to="/activities" class="btn-nav btn-org"
-                    @click="isMobileMenuOpen = false">
+
+                <!-- ลิงก์จัดการกิจกรรม -->
+                <NuxtLink v-if="(isOrgPresident || isClubPresident) && route.path !== '/activities'" to="/activities"
+                    class="btn-nav btn-org" @click="isMobileMenuOpen = false">
                     <AppIcon name="clipboard-list" :size="16" />
-                    <span>จัดการกิจกรรม{{ isClubPresident ? ' (สโมสร)' : ' (องค์การ)' }}</span>
+                    <span>จัดการกิจกรรม</span>
                 </NuxtLink>
 
-                <NuxtLink v-if="isAdmin" to="/admin" class="btn-nav btn-admin" @click="isMobileMenuOpen = false">
+                <!-- ลิงก์แดชบอร์ดเกณฑ์จบการศึกษา (นายกองค์การ / สโมสร / แอดมิน) -->
+                <NuxtLink v-if="(isOrgPresident || isClubPresident || isAdmin) && route.path !== '/dashboard'"
+                    to="/dashboard" class="btn-nav btn-dashboard" @click="isMobileMenuOpen = false">
+                    <AppIcon name="chart-bar" :size="16" />
+                    <span>แดชบอร์ดชั่วโมง</span>
+                </NuxtLink>
+
+                <NuxtLink v-if="isAdmin && !route.path.startsWith('/admin')" to="/admin" class="btn-nav btn-admin"
+                    @click="isMobileMenuOpen = false">
                     <AppIcon name="cog-6-tooth" :size="16" />
-                    <span>เมนูผู้ดูแลระบบ</span>
+                    <span>ผู้ดูแลระบบ</span>
                 </NuxtLink>
 
-                <div class="user-chip">
+                <!-- ลิงก์ชั่วโมงกิจกรรมและประวัติสำหรับนักศึกษา -->
+                <NuxtLink v-if="isStudent && route.path !== '/student/my-activities'" to="/student/my-activities"
+                    class="btn-nav btn-student" @click="isMobileMenuOpen = false">
+                    <AppIcon name="sparkles" :size="16" />
+                    <span>ชั่วโมงและประวัติกิจกรรม</span>
+                </NuxtLink>
+
+                <div class="user-chip" :title="isStudent ? `ชั่วโมงกิจกรรมสะสม: ${accumulatedHours !== null ? accumulatedHours + ' ชม.' : '-'}` : ''">
                     <AppIcon name="user" :size="15" class="user-icon" />
-                    <span class="user-name">{{ currentUser.username }}</span>
+                    <span class="user-name">{{ currentUser.first_name || currentUser.username }}</span>
                     <span class="user-role-badge">({{ currentUser.role }})</span>
+                    <span v-if="isStudent && accumulatedHours !== null" class="user-hours-badge">
+                        <AppIcon name="sparkles" :size="12" class="sparkle-gold" />
+                        <span>{{ accumulatedHours }} ชม.</span>
+                    </span>
                 </div>
 
                 <button @click="handleLogout" class="btn-logout" title="ออกจากระบบ">
@@ -60,9 +80,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '~/components/AppIcon.vue'
+import { useStudentActivity } from '~/composables/useStudentActivity'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,11 +92,31 @@ const authCookie = useCookie('auth_user')
 const currentUser = computed(() => authCookie.value || null)
 const userRole = computed(() => (currentUser.value?.role || '').toLowerCase())
 
+const isStudent = computed(() => userRole.value === 'student')
 const isOrgPresident = computed(() => userRole.value === 'org_president' || userRole.value === 'admin')
 const isClubPresident = computed(() => userRole.value === 'club_president')
 const isAdmin = computed(() => userRole.value === 'admin')
 
 const isMobileMenuOpen = ref(false)
+
+const { studentSummary, fetchSummary } = useStudentActivity()
+
+watch(() => currentUser.value?.student_id, (newId) => {
+    if (isStudent.value && newId) {
+        fetchSummary(newId)
+    }
+}, { immediate: true })
+
+const accumulatedHours = computed(() => {
+    if (!isStudent.value) return null
+    if (studentSummary.value?.summary?.total_hours != null) {
+        return studentSummary.value.summary.total_hours
+    }
+    if (currentUser.value?.accumulated_hours != null) {
+        return Number(currentUser.value.accumulated_hours)
+    }
+    return 0
+})
 
 const handleLogout = () => {
     authCookie.value = null
@@ -236,6 +277,34 @@ const handleLogout = () => {
     color: var(--bru-gold-800, #854d0e);
 }
 
+.btn-dashboard {
+    background: linear-gradient(135deg, #faf5ff 0%, #fffbeb 100%);
+    color: #581c87;
+    border: 1px solid #d8b4fe;
+}
+
+.btn-dashboard:hover {
+    background: linear-gradient(135deg, #f3e8ff 0%, #fef9c3 100%);
+    color: #3b0764;
+    border-color: #facc15;
+    transform: translateY(-1px);
+}
+
+.btn-student {
+    background: linear-gradient(135deg, var(--bru-gold-50, #fffbeb) 0%, var(--bru-purple-50, #faf5ff) 100%);
+    border: 1.5px solid var(--bru-gold-400, #facc15);
+    box-shadow: 0 2px 6px rgba(250, 204, 21, 0.18);
+    color: var(--bru-purple-900, #3b0764);
+}
+
+.btn-student:hover {
+    background: linear-gradient(135deg, var(--bru-gold-100, #fef9c3) 0%, var(--bru-purple-100, #f3e8ff) 100%);
+    border-color: var(--bru-gold-500, #eab308);
+    box-shadow: 0 4px 10px rgba(107, 33, 168, 0.15);
+    color: var(--bru-purple-950, #2e0854);
+    transform: translateY(-1px);
+}
+
 .user-chip {
     display: inline-flex;
     align-items: center;
@@ -247,6 +316,25 @@ const handleLogout = () => {
     font-size: 0.82rem;
     color: #334155;
     font-family: var(--font-heading, sans-serif);
+}
+
+.user-hours-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #fef9c3, #fef08a);
+    border: 1px solid #facc15;
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px rgba(202, 138, 4, 0.15);
+    color: #854d0e;
+    font-size: 0.76rem;
+    font-weight: 700;
+    gap: 0.25rem;
+    margin-left: 0.35rem;
+    padding: 0.15rem 0.55rem;
+}
+
+.sparkle-gold {
+    color: #ca8a04;
 }
 
 .user-icon {
@@ -334,7 +422,8 @@ const handleLogout = () => {
         width: 100%;
         box-sizing: border-box;
         position: absolute;
-        top: 100%; /* Float below the navbar */
+        top: 100%;
+        /* Float below the navbar */
         left: 0;
         background: #ffffff;
         border-bottom: 2px solid var(--bru-gold-400, #facc15);

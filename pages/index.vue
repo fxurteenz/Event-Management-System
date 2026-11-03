@@ -5,6 +5,30 @@
 
         <!-- Main Content Layout -->
         <main class="main-layout">
+            <!-- Student Quick Stats Banner -->
+            <div v-if="isStudent && currentUser" class="student-quick-banner card">
+                <div class="banner-content">
+                    <div class="banner-badge-icon">
+                        <AppIcon name="sparkles" :size="22" />
+                    </div>
+                    <div class="banner-text">
+                        <h4>
+                            ชั่วโมงกิจกรรมสะสมของคุณ:
+                            <span class="hours-highlight">{{ studentSummary?.summary?.total_hours ?? (currentUser.accumulated_hours || 0) }} ชม.</span>
+                            <span class="hours-target">/ 48 ชม. (เกณฑ์จบการศึกษา)</span>
+                        </h4>
+                        <p>
+                            รหัสนักศึกษา: <code>{{ currentUser.student_id }}</code> · คณะ{{ currentUser.faculty_name || 'วิทยาศาสตร์' }} สาขาวิชา{{ currentUser.major_name || '-' }}
+                        </p>
+                    </div>
+                </div>
+                <NuxtLink to="/student/my-activities" class="btn-banner-link">
+                    <AppIcon name="clipboard-list" :size="16" />
+                    <span>ดูประวัติและชั่วโมงกิจกรรม</span>
+                    <AppIcon name="chevron-right" :size="14" />
+                </NuxtLink>
+            </div>
+
             <!-- Left Column: Calendar Section -->
             <section class="calendar-section card">
                 <div class="calendar-header">
@@ -293,6 +317,7 @@ import AppNavbar from "~/components/AppNavbar.vue"
 import { ref, computed, onMounted, watch } from 'vue'
 import ActivityTicketModal from '~/components/activities/ActivityTicketModal.vue'
 import AppIcon from '~/components/common/AppIcon.vue'
+import { useStudentActivity } from '~/composables/useStudentActivity'
 
 const authCookie = useCookie('auth_user')
 const currentUser = computed(() => authCookie.value || null)
@@ -302,6 +327,8 @@ const isStudent = computed(() => userRole.value === 'student')
 const isOrgPresident = computed(() => userRole.value === 'org_president' || userRole.value === 'admin')
 const isClubPresident = computed(() => userRole.value === 'club_president')
 const isAdmin = computed(() => userRole.value === 'admin')
+
+const { studentSummary, fetchSummary: fetchStudentSummary } = useStudentActivity()
 
 // Mobile Navigation Drawer Toggle State
 const isMobileMenuOpen = ref(false)
@@ -341,12 +368,18 @@ const fetchMyRegistrations = async () => {
 onMounted(() => {
     if (isStudent.value) {
         fetchMyRegistrations()
+        if (currentUser.value?.student_id) {
+            fetchStudentSummary(currentUser.value.student_id)
+        }
     }
 })
 
-watch(() => currentUser.value?.student_id, () => {
+watch(() => currentUser.value?.student_id, (newId) => {
     if (isStudent.value) {
         fetchMyRegistrations()
+        if (newId) {
+            fetchStudentSummary(newId)
+        }
     }
 })
 
@@ -915,6 +948,105 @@ const formatDateTime = (dateStr) => {
     width: 100%;
     box-sizing: border-box;
     margin: 0 auto;
+}
+
+/* Student Quick Stats Banner */
+.student-quick-banner {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 55%, #fffbeb 100%);
+    border: 1.5px solid var(--bru-gold-300, #fde047);
+    border-left: 5px solid var(--bru-purple-600, #7e22ce);
+    padding: 1.15rem 1.5rem;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(107, 33, 168, 0.07);
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.banner-badge-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--bru-purple-700, #6b21a8) 0%, var(--bru-purple-900, #3b0764) 100%);
+    color: var(--bru-gold-300, #fde047);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 8px rgba(107, 33, 168, 0.2);
+}
+
+.banner-text h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--bru-purple-950, #2e0854);
+    font-family: var(--font-heading, sans-serif);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.hours-highlight {
+    color: var(--bru-purple-700, #6b21a8);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.hours-target {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: normal;
+}
+
+.banner-text p {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: #64748b;
+    font-family: var(--font-body, sans-serif);
+}
+
+.banner-text code {
+    background: #f1f5f9;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.btn-banner-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.25rem;
+    background: linear-gradient(135deg, var(--bru-purple-600, #7e22ce) 0%, var(--bru-purple-700, #6b21a8) 100%);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(107, 33, 168, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: var(--font-heading, sans-serif);
+    white-space: nowrap;
+}
+
+.btn-banner-link:hover {
+    background: linear-gradient(135deg, var(--bru-purple-700, #6b21a8) 0%, var(--bru-purple-800, #581c87) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(107, 33, 168, 0.35);
 }
 
 .calendar-section,
